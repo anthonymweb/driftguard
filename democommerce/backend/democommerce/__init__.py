@@ -1,0 +1,1 @@
+"""DemoCommerce controlled test application."""

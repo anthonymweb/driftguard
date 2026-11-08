@@ -1,0 +1,50 @@
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      DEMO_DATABASE_URL: sqlite:////data/democommerce.db
+      DEMO_TEST_PROFILES_ENABLED: ${DEMO_TEST_PROFILES_ENABLED:-0}
+      DEMO_SESSION_COOKIE_SECURE: ${DEMO_SESSION_COOKIE_SECURE:-1}
+      DEMO_CORS_ORIGINS: ${DEMO_CORS_ORIGINS:?Set the authorized HTTPS origin}
+      DEMO_TRUSTED_PROXY_IPS: 172.28.50.2
+      DEMO_LOCAL_PROXY_CLIENTS: 172.28.50.1
+      DEMO_ENABLE_HSTS: "0"
+    volumes:
+      - democommerce_data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+    networks:
+      app_private:
+        ipv4_address: 172.28.50.3
+
+  web:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    environment:
+      DEMO_HOSTNAME: ${DEMO_HOSTNAME:?Set the authorized test hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      app_private:
+        ipv4_address: 172.28.50.2
+
+volumes:
+  democommerce_data:
+
+networks:
+  app_private:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.50.0/24
+          gateway: 172.28.50.1

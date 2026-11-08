@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+*.db
+.env
+certs/
+ground_truth.csv
+scans.json
+state.json
+nginx/conf.d/*.conf
+.superpowers/

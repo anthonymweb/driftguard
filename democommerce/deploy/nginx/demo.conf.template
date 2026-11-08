@@ -1,0 +1,81 @@
+map $security_profile $profile_csp {
+    default "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
+    TEST_CHANGE "";
+}
+
+map $security_profile $profile_frame_options {
+    default "DENY";
+    TEST_CHANGE "";
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${DEMO_HOSTNAME};
+
+    ssl_certificate     /etc/nginx/certs/${DEMO_HOSTNAME}.crt;
+    ssl_certificate_key /etc/nginx/certs/${DEMO_HOSTNAME}.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 1m;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options $profile_frame_options always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy $profile_csp always;
+
+    location = /_profile_check {
+        internal;
+        proxy_pass http://api:8000/api/internal/security-profile;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+    }
+
+    location = /api/internal/security-profile {
+        return 404;
+    }
+
+    location ~ ^/api/admin/security-profile(?:/|$) {
+        allow 127.0.0.1;
+        allow ::1;
+        allow 172.28.50.1;
+        deny all;
+        auth_request /_profile_check;
+        auth_request_set $security_profile $upstream_http_x_active_profile;
+        proxy_pass http://api:8000;
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header X-Frame-Options;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/ {
+        auth_request /_profile_check;
+        auth_request_set $security_profile $upstream_http_x_active_profile;
+        proxy_pass http://api:8000;
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header X-Frame-Options;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 20s;
+    }
+
+    location / {
+        auth_request /_profile_check;
+        auth_request_set $security_profile $upstream_http_x_active_profile;
+        try_files $uri $uri/ /index.html;
+    }
+}

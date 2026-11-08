@@ -1,0 +1,22 @@
+# eServices Lab: simulated e-government case-study target. LOCAL ONLY (127.0.0.1).
+name: eservices-lab
+services:
+  portal:
+    build: ./app
+    restart: unless-stopped
+    networks: [lab]
+  nginx:                      # controlled host: TLS termination + routing, re-rendered per drift scenario
+    image: nginx:1.27-alpine
+    ports: ["127.0.0.1:8443:443", "127.0.0.1:8080:80"]
+    volumes: ["./nginx/conf.d:/etc/nginx/conf.d:ro", "./certs:/etc/nginx/certs:ro"]
+    depends_on: [portal]
+    restart: unless-stopped
+    networks: [lab]
+  legacy-admin:               # started only by the 'port-open' drift scenario
+    image: nginx:1.27-alpine
+    profiles: ["drift-port"]
+    ports: ["127.0.0.1:8081:80"]
+    volumes: ["./legacy-admin:/usr/share/nginx/html:ro"]
+    networks: [lab]
+networks:
+  lab: {driver: bridge}

@@ -1,0 +1,9 @@
+{
+  "name": "civic-services-portal",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": { "dev": "vite --host 127.0.0.1 --port 5175", "build": "vite build", "preview": "vite preview --host 127.0.0.1 --port 4175" },
+  "dependencies": { "lucide-react": "1.70.0", "react": "19.3.1", "react-dom": "19.3.1" },
+  "devDependencies": { "vite": "^8.3.6" }
+}
