@@ -16,7 +16,7 @@ Today only one of the three custom applications (`eservices-lab`) has that shape
 **Five targets:**
 
 1. `eservices-lab` — simulated e-government portal + API behind nginx (already complete; not rewritten)
-2. `demcommerce` — e-commerce store: FastAPI + React + nginx (exists; needs lab wiring)
+2. `democommerce` — e-commerce store: FastAPI + React + nginx (exists; needs lab wiring)
 3. `civic-services-portal` — civic information portal: React only today (needs an API + controlled host)
 4. OWASP Juice Shop — established vulnerable web application benchmark (third-party image)
 5. VAmPI — established vulnerable REST API benchmark (third-party image)
@@ -35,7 +35,7 @@ Today only one of the three custom applications (`eservices-lab`) has that shape
 
 ## 3. Non-goals and anti-goals
 
-- **No new audit areas.** HTTP response headers, CORS, cookies, HSTS, rate limiting and every vulnerability class outside TLS, ports/services and API exposure are *not* assessed by DriftGuard. `demcommerce`'s existing `BASELINE / TEST_CHANGE / RESTORED` security-profile mechanism operates on exactly those out-of-scope properties; it is left untouched and is **not** wired into this domain.
+- **No new audit areas.** HTTP response headers, CORS, cookies, HSTS, rate limiting and every vulnerability class outside TLS, ports/services and API exposure are *not* assessed by DriftGuard. `democommerce`'s existing `BASELINE / TEST_CHANGE / RESTORED` security-profile mechanism operates on exactly those out-of-scope properties; it is left untouched and is **not** wired into this domain.
 - **No modification of third-party benchmark code.** Juice Shop and VAmPI are run from published images. Their source is never edited, because a modified benchmark is no longer a benchmark.
 - **No live-system testing.** Nothing in this design contacts any host other than `127.0.0.1`. NITA-U production systems are never scanned.
 - **No changes to the classification rules or the redaction rule.** The five states and the token-based redaction boundary are fixed by the project brief and are reproduced here only as they already exist.
@@ -91,7 +91,7 @@ All addresses are `127.0.0.1`. Ports were checked as free on this machine before
 | # | Target | Stack | HTTPS | HTTP | Extra port | Areas covered |
 |---|---|---|---|---|---|---|
 | 1 | `eservices-lab` | Flask + nginx (existing) | **8443** | **8080** | **8081** (`legacy-admin`, existing) | all three |
-| 2 | `demcommerce` | FastAPI + React + nginx (existing) | **8444** | **8082** | — | all three |
+| 2 | `democommerce` | FastAPI + React + nginx (existing) | **8444** | **8082** | — | all three |
 | 3 | `civic-services-portal` | new Flask API + nginx serving `dist/` | **8445** | **8083** | **8084** (raw API) | all three |
 | 4 | Juice Shop | `bkimminich/juice-shop:latest` + nginx | **8446** | **8085** | — | all three |
 | 5 | VAmPI | `erev0s/vampi:latest` + nginx | **8447** | **8086** | **8087** (raw API) | all three |
@@ -114,7 +114,7 @@ Seventeen scenarios in total: the five already implemented on `eservices-lab`, p
 | `port-open` | Network/Service | `legacy-admin` container published on 8081 |
 | `api-debug` | API | `/api/v1/admin/debug` proxied instead of returning 403 |
 
-**New — `demcommerce`**
+**New — `democommerce`**
 
 | Scenario | Area | Change at the controlled host | Probe (baseline → drift) |
 |---|---|---|---|
@@ -122,7 +122,7 @@ Seventeen scenarios in total: the five already implemented on `eservices-lab`, p
 | `http-plain` | Network/Service | port 8082 serves the storefront instead of 301 → HTTPS | 3xx → 2xx |
 | `api-debug` | API | `/api/internal/security-profile` stops being masked by the exact-match `location` (currently `return 404`) and is proxied to the API | 404 → 204 carrying the `X-Active-Profile` header |
 
-The `api-debug` scenario reuses an endpoint the application already exposes internally (`GET /api/internal/security-profile`). Nothing in `demcommerce/backend` changes; only the nginx template gains a rendered fragment.
+The `api-debug` scenario reuses an endpoint the application already exposes internally (`GET /api/internal/security-profile`). Nothing in `democommerce/backend` changes; only the nginx template gains a rendered fragment.
 
 **New — `civic-services-portal`**
 
@@ -165,7 +165,7 @@ eservices-lab/
 │   └── targets/
 │       ├── __init__.py
 │       ├── eservices.py       # WRAPS existing eservices-lab/lab.py via subprocess; does not rewrite it
-│       ├── demcommerce.py
+│       ├── democommerce.py
 │       ├── civicportal.py
 │       ├── juiceshop.py
 │       └── vampi.py
@@ -181,7 +181,7 @@ Plus, inside the applications we own:
 
 - `civic-services-portal/api/server.py` — the new Flask API
 - `civic-services-portal/deploy/{compose.yaml, nginx/lab.conf.tpl}` — controlled host serving `dist/` and proxying `/api/`
-- `demcommerce/deploy/{lab.compose.yaml, nginx/lab.conf.tpl}` — lab-specific stack; the existing `deploy/compose.yaml` and its documented Ubuntu deployment are left untouched
+- `democommerce/deploy/{lab.compose.yaml, nginx/lab.conf.tpl}` — lab-specific stack; the existing `deploy/compose.yaml` and its documented Ubuntu deployment are left untouched
 
 Each `targets/*.py` module implements the same small interface:
 
@@ -313,12 +313,12 @@ python domain.py verify [--json]         # exit code 0 only if every probe match
 | `targets/vampi/{compose.yaml,nginx/site.conf.tpl}` | VAmPI controlled host |
 | `civic-services-portal/api/server.py` | new Flask API for the civic portal |
 | `civic-services-portal/deploy/{compose.yaml,nginx/lab.conf.tpl}` | civic portal controlled host |
-| `demcommerce/deploy/{lab.compose.yaml,nginx/lab.conf.tpl}` | demcommerce lab stack |
+| `democommerce/deploy/{lab.compose.yaml,nginx/lab.conf.tpl}` | democommerce lab stack |
 | `certs/` (generated) | shared localhost + mismatch certificates |
 | `ground_truth.csv`, `scans.json` | authoritative domain ground truth |
 | `docs/domain.md` | operator guide: bringing the domain up, running the scan sequence, reading `truth` |
 
-**Files explicitly not modified:** `eservices-lab/lab.py`, `eservices-lab/app/server.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `demcommerce/backend/**`, `demcommerce/deploy/compose.yaml`, `demcommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, and all Juice Shop / VAmPI image contents. The single exception is `eservices-lab/README.md`, which gains a short pointer to `domain.py` as the supported entry point.
+**Files explicitly not modified:** `eservices-lab/lab.py`, `eservices-lab/app/server.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `democommerce/backend/**`, `democommerce/deploy/compose.yaml`, `democommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, and all Juice Shop / VAmPI image contents. The single exception is `eservices-lab/README.md`, which gains a short pointer to `domain.py` as the supported entry point.
 
 ### 6.8 Verification
 
@@ -336,7 +336,7 @@ Additionally, `domain.py status` shows all five targets' scenario states in one 
 | The corrupt pre-existing image breaks a Docker operation | Pulls and `compose up` were verified working. Never run `docker rmi` on unrelated images; if a specific command fails, work around it rather than cleaning the store. |
 | Juice Shop's `/rest/admin/*` behaves differently than expected behind a proxy | Verify by running the image during implementation; if the paths do not respond as designed, substitute another observable, authenticated-free Juice Shop API surface and record the substitution in `docs/domain.md`. The scenario *name* and *area* do not change. |
 | Port collisions with other work on this machine | Ports were checked as free before allocation (8080–8087, 8443–8447). All bind loopback only. |
-| `demcommerce` lab stack requires env vars (`DEMO_HOSTNAME`, `DEMO_CORS_ORIGINS`) and certificates that do not exist yet | The lab compose file supplies them explicitly and `domain.py` generates `certs/` before first `up`. |
+| `democommerce` lab stack requires env vars (`DEMO_HOSTNAME`, `DEMO_CORS_ORIGINS`) and certificates that do not exist yet | The lab compose file supplies them explicitly and `domain.py` generates `certs/` before first `up`. |
 | The civic portal currently has no backend; adding one could disturb a working UI | The React source is untouched. The API is a separate service; nginx serves the existing `dist/` build. |
 | Scenario state drifting out of sync with the containers | `verify` after every `on`/`off`, exactly as the existing lab does. |
 
