@@ -10,3 +10,4 @@ scans.json
 state.json
 nginx/conf.d/*.conf
 .superpowers/
+.worktrees/
