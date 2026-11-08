@@ -105,7 +105,7 @@ def probes() -> dict[str, Callable[[], ProbeResult]]   # scenario name → probe
 
 Each template also contains a literal `upstream app { server <container>:<port>; }` and its own literal static/API locations. Pass all four placeholders on every target, even where a value is constant, so the render path is uniform.
 
-**Compose project names.** Every new `compose.yaml` sets a top-level `name:` — `democommerce-lab`, `civic-portal-lab`, `juice-shop-lab`, `vampi-lab`. Without it, Compose derives the project name from the compose file's directory, and both `demcommerce/deploy/` and `civic-services-portal/deploy/` would resolve to `deploy`, so their containers, networks and `exec nginx` targets would collide.
+**Compose project names.** Every new `compose.yaml` sets a top-level `name:` — `democommerce-lab`, `civic-portal-lab`, `juice-shop-lab`, `vampi-lab`. Without it, Compose derives the project name from the compose file's directory, and both `democommerce/deploy/` and `civic-services-portal/deploy/` would resolve to `deploy`, so their containers, networks and `exec nginx` targets would collide.
 
 ---
 
@@ -659,20 +659,20 @@ class DemocommerceRenderTests(unittest.TestCase):
 
 Template contains a literal `upstream app { server api:8000; }`, a `location /api/ { proxy_pass ... }` block, and `location / { try_files $uri $uri/ /index.html; }` serving `../frontend/dist`. The module builds the four placeholder values from state, writes the rendered config to `nginx/conf.d/default.conf`, and calls `compose.reload_nginx`.
 
-`lab.compose.yaml` opens with `name: democommerce-lab` (see the Compose project-name note above). Services: `api` (**build `../backend`** — relative to `demcommerce/deploy/`, so `../../backend` would resolve outside the app and fail), `DEMO_DATABASE_URL=sqlite:////data/democommerce.db` with a named volume mounted at `/data` (the app's `lifespan` runs `create_all` and seeds the catalogue, so no manual init), `DEMO_CORS_ORIGINS=https://127.0.0.1:8444`, `DEMO_SESSION_COOKIE_SECURE=1`, `DEMO_TEST_PROFILES_ENABLED=0`, `DEMO_TRUSTED_PROXY_IPS=172.30.50.2`, `DEMO_LOCAL_PROXY_CLIENTS=127.0.0.1`; and `nginx` (`nginx:1.27-alpine`, ports `127.0.0.1:8444:443` and `127.0.0.1:8082:80`, mounting `./nginx/conf.d`, `../../certs`, `../frontend/dist`, on a fixed `172.30.50.0/24` network with `ipv4_address: 172.30.50.2` so the trusted-proxy value above matches the proxy's address). Do **not** reuse `deploy/compose.yaml`.
+`lab.compose.yaml` opens with `name: democommerce-lab` (see the Compose project-name note above). Services: `api` (**build `../backend`** — relative to `democommerce/deploy/`, so `../../backend` would resolve outside the app and fail), `DEMO_DATABASE_URL=sqlite:////data/democommerce.db` with a named volume mounted at `/data` (the app's `lifespan` runs `create_all` and seeds the catalogue, so no manual init), `DEMO_CORS_ORIGINS=https://127.0.0.1:8444`, `DEMO_SESSION_COOKIE_SECURE=1`, `DEMO_TEST_PROFILES_ENABLED=0`, `DEMO_TRUSTED_PROXY_IPS=172.30.50.2`, `DEMO_LOCAL_PROXY_CLIENTS=127.0.0.1`; and `nginx` (`nginx:1.27-alpine`, ports `127.0.0.1:8444:443` and `127.0.0.1:8082:80`, mounting `./nginx/conf.d`, `../../certs`, `../frontend/dist`, on a fixed `172.30.50.0/24` network with `ipv4_address: 172.30.50.2` so the trusted-proxy value above matches the proxy's address). Do **not** reuse `deploy/compose.yaml`.
 
 The `{{HTTP_BLOCK}}` drift value for this target is `    location / { try_files $uri $uri/ /index.html; }`, not the shared `proxy_pass` default — DemoCommerce's `/` is the static bundle and the FastAPI app has no route for it.
 
 - [ ] **Step 4: Run test to verify it passes**
 - [ ] **Step 5: Bring the target up and verify it live**
 
-**Prerequisite — build the store bundle.** `demcommerce/frontend/dist/` is gitignored by the app's own `.gitignore`, so it does **not** exist in this worktree. Build it once:
+**Prerequisite — build the store bundle.** `democommerce/frontend/dist/` is gitignored by the app's own `.gitignore`, so it does **not** exist in this worktree. Build it once:
 
 ```bash
-cd demcommerce/frontend && npm ci && npm run build && cd ../..
+cd democommerce/frontend && npm ci && npm run build && cd ../..
 ```
 
-(Node v24.22.2 / npm 11.19.1 are present and the npm registry is reachable.) If `npm ci` fails for network reasons, copy `/mnt/data/eservices-lab/demcommerce/frontend/dist` instead — same source at the same commit. Without a bundle nginx mounts an empty directory, `/` answers 404, and `http-plain` can never return 2xx. Record whichever route you used in `docs/domain.md` (Task 13).
+(Node v24.22.2 / npm 11.19.1 are present and the npm registry is reachable.) If `npm ci` fails for network reasons, copy `/mnt/data/eservices-lab/democommerce/frontend/dist` instead — same source at the same commit. Without a bundle nginx mounts an empty directory, `/` answers 404, and `http-plain` can never return 2xx. Record whichever route you used in `docs/domain.md` (Task 13).
 
 ```bash
 python domain.py up democommerce
