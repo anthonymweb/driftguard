@@ -20,7 +20,7 @@
 - Fictional identifiers only: `TEST-0001`, `CMTEST00000001`, `+256700000001`, `10.20.0.0/24`, `lab-demo-key`.
 - Never modify: `eservices-lab/lab.py`, `eservices-lab/app/server.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `democommerce/backend/**`, `democommerce/deploy/compose.yaml`, `democommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, or Juice Shop / VAmPI image contents. Sole exception: `eservices-lab/README.md` gains a pointer to `domain.py`.
 - CLI contract frozen by spec §6.6: `up [target]`, `down [target]`, `status [--json]`, `on <target> <scenario>`, `off <target> <scenario>`, `reset [target]`, `mark <label>`, `truth [--json]`, `verify [--json]`.
-- Test command from repo root: `python -m unittest discover -s tests -v`.
+- Test command from repo root: `python3 -m unittest discover -s tests -v`.
 - Commit at the end of every task.
 
 ## Review Focus
@@ -158,7 +158,7 @@ class ModelTests(unittest.TestCase):
 
 - [ ] **Step 3: Run test to verify it fails**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'domain'`
 
 - [ ] **Step 4: Implement `domain/model.py`**
@@ -169,7 +169,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'domain'`
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: PASS
 
 - [ ] **Step 6: Commit**
@@ -238,7 +238,7 @@ class ClassifyTests(unittest.TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m unittest tests.test_classify -v`
+Run: `python3 -m unittest tests.test_classify -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'domain.classify'`
 
 - [ ] **Step 3: Implement `classify(history: Sequence[bool]) -> list[str]` in `domain/classify.py`**
@@ -247,7 +247,7 @@ Rules, in order, exactly as spec §6.4: index 0 → `BASELINE` if present else `
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -304,7 +304,7 @@ Each test writes to a `tempfile.TemporaryDirectory` — patch `state.GROUND_TRUT
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m unittest tests.test_state -v`
+Run: `python3 -m unittest tests.test_state -v`
 Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 3: Implement `domain/state.py`**
@@ -313,7 +313,7 @@ Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -382,7 +382,7 @@ Use `http.server.HTTPServer` on `("127.0.0.1", 0)` in a daemon thread for the HT
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m unittest tests.test_probes -v`
+Run: `python3 -m unittest tests.test_probes -v`
 Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 3: Implement `domain/probes.py`**
@@ -391,7 +391,7 @@ Legacy handshake: build an `ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)` with `check
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: PASS — confirm the two TLS tests actually ran rather than skipping.
 
 - [ ] **Step 5: Commit**
@@ -440,7 +440,7 @@ class CertTests(unittest.TestCase):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `python -m unittest tests.test_render tests.test_certs -v`
+Run: `python3 -m unittest tests.test_render tests.test_certs -v`
 Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 3: Implement `domain/render.py` and `domain/certs.py`**
@@ -449,7 +449,7 @@ Expected: FAIL with `ModuleNotFoundError`
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -497,7 +497,7 @@ class ComposeTests(unittest.TestCase):
 - [ ] **Step 3: Implement `domain/compose.py`**
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `python -m unittest discover -s tests -v` → PASS
+Run: `python3 -m unittest discover -s tests -v` → PASS
 
 - [ ] **Step 5: Commit**
 
@@ -541,7 +541,7 @@ class RegistryTests(unittest.TestCase):
 
 `targets/__init__.py` holds an explicit `MODULES: dict[str, ModuleType]` with one import per target — add an entry here in every later target task. `config.py` builds `TARGETS` from `MODULES` and exposes `get()`.
 
-`targets/eservices.py` shells out to `python eservices-lab/lab.py <subcommand>` for `up`, `down`, `on`, `off` and `verify`, and reads `eservices-lab/state.json` for `read_state`. Its `nginx_config` returns `None` because `lab.py` owns that template. It must not import or modify `lab.py`.
+`targets/eservices.py` shells out to `python3 eservices-lab/lab.py <subcommand>` for `up`, `down`, `on`, `off` and `verify`, and reads `eservices-lab/state.json` for `read_state`. Its `nginx_config` returns `None` because `lab.py` owns that template. It must not import or modify `lab.py`.
 
 - [ ] **Step 4: Run test to verify it passes**
 - [ ] **Step 5: Commit**
@@ -606,7 +606,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run test to verify it passes**
 - [ ] **Step 5: Smoke-test the real entry point**
 
-Run: `python domain.py status --json`
+Run: `python3 domain.py status --json`
 Expected: a JSON object listing `eservices-lab` with its five scenarios; no exception. This also confirms the root-script-plus-package import resolution.
 
 - [ ] **Step 6: Commit**
@@ -675,8 +675,8 @@ cd democommerce/frontend && npm ci && npm run build && cd ../..
 (Node v24.22.2 / npm 11.19.1 are present and the npm registry is reachable.) If `npm ci` fails for network reasons, copy `/mnt/data/eservices-lab/democommerce/frontend/dist` instead — same source at the same commit. Without a bundle nginx mounts an empty directory, `/` answers 404, and `http-plain` can never return 2xx. Record whichever route you used in `docs/domain.md` (Task 13).
 
 ```bash
-python domain.py up democommerce
-python domain.py verify
+python3 domain.py up democommerce
+python3 domain.py verify
 ```
 Expected: `verify` reports all three democommerce probes `PASS`. If `api-debug` does not return 204, check `docker compose -f democommerce/deploy/lab.compose.yaml logs api`.
 
@@ -748,13 +748,13 @@ cd civic-services-portal && npm ci && npm run build && cd ..
 (Node v24.22.2 / npm 11.19.1 are present and the npm registry is reachable.) If `npm ci` fails for network reasons, copy `/mnt/data/eservices-lab/civic-services-portal/dist` instead — same source at the same commit. `src/` must not change either way. Record which route you used in `docs/domain.md` (Task 13).
 
 ```bash
-python domain.py up civic-services-portal
-python domain.py verify
+python3 domain.py up civic-services-portal
+python3 domain.py verify
 curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:8445/api/v1/admin/debug   # expect 403
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8084/health                 # expect connection refused
-python domain.py on civic-services-portal port-open
+python3 domain.py on civic-services-portal port-open
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8084/health                 # expect 200
-python domain.py off civic-services-portal port-open
+python3 domain.py off civic-services-portal port-open
 ```
 
 Also confirm the existing UI still loads: `curl -sk https://127.0.0.1:8445/ | head -5` must return the portal HTML.
@@ -797,12 +797,12 @@ Image `bkimminich/juice-shop:latest`, container port 3000, **no source modificat
 
 ```bash
 docker pull bkimminich/juice-shop:latest
-python domain.py up juice-shop
-python domain.py verify
+python3 domain.py up juice-shop
+python3 domain.py verify
 curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:8446/rest/admin/application-configuration   # expect 403
-python domain.py on juice-shop api-debug
+python3 domain.py on juice-shop api-debug
 curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:8446/rest/admin/application-configuration   # expect 200
-python domain.py off juice-shop api-debug
+python3 domain.py off juice-shop api-debug
 ```
 
 If the path does not return 200 when unblocked, substitute another observable unauthenticated Juice Shop API path, keep the scenario name and area unchanged, and record the substitution in `docs/domain.md` (spec §7 risk).
@@ -846,12 +846,12 @@ Image `erev0s/vampi:latest`, container port 5000, no source modification; the co
 
 ```bash
 docker pull erev0s/vampi:latest
-python domain.py up vampi
-python domain.py verify
+python3 domain.py up vampi
+python3 domain.py verify
 curl -sk -o /dev/null -w '%{http_code}\n' https://127.0.0.1:8447/users/v1/_debug      # expect 403
-python domain.py on vampi api-debug
+python3 domain.py on vampi api-debug
 curl -sk -w '\n%{http_code}\n' https://127.0.0.1:8447/users/v1/_debug                 # expect 200 with user data
-python domain.py off vampi api-debug
+python3 domain.py off vampi api-debug
 ```
 
 - [ ] **Step 6: Commit**
@@ -873,7 +873,7 @@ git add -A && git commit -m "feat(domain): vampi controlled host with genuine ex
 
 - [ ] **Step 1: Write `sequence.py`**
 
-A stdlib script that drives the frozen CLI in subprocesses through the nine scans of spec §6.5, calling `python domain.py mark S<n>` after each step and printing `python domain.py truth` at the end. Scenario toggles per scan are copied exactly from the §6.5 table:
+A stdlib script that drives the frozen CLI in subprocesses through the nine scans of spec §6.5, calling `python3 domain.py mark S<n>` after each step and printing `python3 domain.py truth` at the end. Scenario toggles per scan are copied exactly from the §6.5 table:
 
 ```
 S1 all off | S2 tls-legacy+cert-mismatch on | S3 +http-plain | S4 tls off, port-open on
@@ -889,27 +889,27 @@ Cover: the five targets and their addresses, the seventeen scenarios by area, br
 
 - [ ] **Step 3: Run the full suite**
 
-Run: `python -m unittest discover -s tests -v`
+Run: `python3 -m unittest discover -s tests -v`
 Expected: PASS, zero failures, zero skips other than a justified `HAS_TLSv1` skip.
 
 - [ ] **Step 4: End-to-end verification with all five targets up**
 
 ```bash
-python domain.py up
-python domain.py verify
-python domain.py status --json
+python3 domain.py up
+python3 domain.py verify
+python3 domain.py status --json
 ```
 Expected: `verify` exit code 0 for every probe on all five targets; `status --json` lists five targets, seventeen scenarios.
 
 - [ ] **Step 5: Run one short classification cycle and read `truth`**
 
 ```bash
-python domain.py mark S0
-python domain.py on eservices-lab tls-legacy
-python domain.py mark S1
-python domain.py off eservices-lab tls-legacy
-python domain.py mark S2
-python domain.py truth
+python3 domain.py mark S0
+python3 domain.py on eservices-lab tls-legacy
+python3 domain.py mark S1
+python3 domain.py off eservices-lab tls-legacy
+python3 domain.py mark S2
+python3 domain.py truth
 ```
 Expected: the `eservices-lab / TLS / tls-legacy` row reads `NO DRIFT`, `NEW`, `FIXED` across `S0`, `S1`, `S2`; every other row reads `NO DRIFT` throughout. (`S0` must be marked first — with no prior scan, a scenario present at the first mark is `BASELINE`, not `NEW`.)
 
