@@ -470,13 +470,15 @@ git add -A && git commit -m "feat(domain): nginx template rendering and lab cert
 - Produces (consumed by every target module):
 
 ```python
-def run(project_dir: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess
-def up(project_dir: Path, override: Path | None = None) -> None
-    # ["docker","compose"] + (["-f", str(project_dir/"compose.yaml")] + ["-f", str(override)] if override else []) + ["up","-d"]
-def down(project_dir: Path) -> None
-def reload_nginx(project_dir: Path) -> None     # exec -T nginx nginx -s reload, check=False
-def recreate(project_dir: Path, override: Path | None = None) -> None   # up -d --force-recreate
+def run(compose_file: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess
+def up(compose_file: Path, override: Path | None = None) -> None
+    # ["docker","compose"] + (["-f", str(compose_file)] + ["-f", str(override)] if override else []) + ["up","-d"]
+def down(compose_file: Path) -> None
+def reload_nginx(compose_file: Path) -> None   # exec -T nginx nginx -s reload, check=False
+def recreate(compose_file: Path, override: Path | None = None) -> None   # up -d --force-recreate
 ```
+
+**Compose-file ruling (pre-flight, Task 6 review):** the helpers take the compose **file path** explicitly, never a directory. `docker compose -f <file>` is then always explicit, no inference from cwd or directory contents, and Task 9's `demcommerce/deploy/lab.compose.yaml` works without special-casing — `demcommerce/deploy/compose.yaml` (the app's own deployment file, never modified or reused) can never be picked up by accident. Callers pass `ROOT / "<target>/deploy/compose.yaml"` or the lab-specific file as appropriate.
 
 - [ ] **Step 1: Write the failing test**
 
