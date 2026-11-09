@@ -1,51 +1,53 @@
 """Thin wrappers around the `docker compose` CLI used by the target modules.
 
-Every helper pins the project via `-f <project_dir>/compose.yaml` so the
-invoked project never depends on the current working directory (the lab's
-`demcommerce/deploy/` and `civic-services-portal/deploy/` would otherwise
-both derive the project name `deploy`).  These helpers carry no policy:
-they build the exact argv and propagate failures (`check=True`) except
-`reload_nginx`, whose absent container is an expected, tolerated state.
+Every helper takes the compose **file path** explicitly and passes
+`-f str(compose_file)` — never a directory, never cwd-based inference — so
+the invoked file is always the intended one: Task 9's lab stack
+`demcommerce/deploy/lab.compose.yaml` works without special-casing, and the
+protected `demcommerce/deploy/compose.yaml` can never be picked up by
+accident.  These helpers carry no policy: they build the exact argv and
+propagate failures (`check=True`) except `reload_nginx`, whose absent
+container is an expected, tolerated state.
 """
 import subprocess
 from pathlib import Path
 
 
-def _files(project_dir: Path, override: Path | None = None) -> list[str]:
-    """The `-f` flags selecting the project's compose file(s)."""
-    files = ["-f", str(Path(project_dir) / "compose.yaml")]
+def _files(compose_file: Path, override: Path | None = None) -> list[str]:
+    """The `-f` flags selecting the compose file(s)."""
+    files = ["-f", str(compose_file)]
     if override is not None:
         files += ["-f", str(override)]
     return files
 
 
-def run(project_dir: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
-    """Run `docker compose -f <project_dir>/compose.yaml <args...>`."""
+def run(compose_file: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run `docker compose -f <compose_file> <args...>`."""
     return subprocess.run(
-        ["docker", "compose", *_files(project_dir), *args], check=check)
+        ["docker", "compose", *_files(compose_file), *args], check=check)
 
 
-def up(project_dir: Path, override: Path | None = None) -> None:
+def up(compose_file: Path, override: Path | None = None) -> None:
     """Start the project detached, optionally layering an override file."""
     subprocess.run(
-        ["docker", "compose", *_files(project_dir, override), "up", "-d"],
+        ["docker", "compose", *_files(compose_file, override), "up", "-d"],
         check=True)
 
 
-def down(project_dir: Path) -> None:
+def down(compose_file: Path) -> None:
     """Stop and remove the project's containers."""
-    run(project_dir, "down")
+    run(compose_file, "down")
 
 
-def reload_nginx(project_dir: Path) -> None:
+def reload_nginx(compose_file: Path) -> None:
     """Reload nginx in its container; a missing container must not raise."""
-    run(project_dir, "exec", "-T", "nginx", "nginx", "-s", "reload",
+    run(compose_file, "exec", "-T", "nginx", "nginx", "-s", "reload",
         check=False)
 
 
-def recreate(project_dir: Path, override: Path | None = None) -> None:
+def recreate(compose_file: Path, override: Path | None = None) -> None:
     """Force-recreate the project's containers (`up -d --force-recreate`)."""
     subprocess.run(
-        ["docker", "compose", *_files(project_dir, override),
+        ["docker", "compose", *_files(compose_file, override),
          "up", "-d", "--force-recreate"],
         check=True)
