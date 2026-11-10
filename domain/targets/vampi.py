@@ -156,9 +156,9 @@ def _wait_for_ready(timeout: int = 180) -> None:
 def up() -> None:
     certs.ensure_certs(CERT_DIR)
     compose.up(COMPOSE_FILE)
-    _init_db()
-    _wait_for_ready()
-    apply({}, read_state())
+    apply({}, read_state())   # the controlled host now serves the configured server blocks
+    _init_db()                # /createdb is reachable now
+    _wait_for_ready()         # poll until the application answers with a status below 500
 
 
 def down() -> None:

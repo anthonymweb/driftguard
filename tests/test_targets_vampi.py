@@ -145,16 +145,23 @@ class VampiLifecycleTests(unittest.TestCase):
     @patch("domain.targets.vampi.read_state")
     @patch("domain.targets.vampi._wait_for_ready")
     @patch("domain.targets.vampi._init_db")
-    def test_up_ensures_certs_starts_initializes_waits_and_reapplies_state(
+    def test_up_ensures_certs_starts_applies_initializes_then_waits(
         self, mock_init, mock_wait, mock_read, mock_apply, mock_certs, mock_up
     ):
         mock_read.return_value = {s: False for s in NAMES}
+        order = []
+        mock_certs.side_effect = lambda *_: order.append("certs")
+        mock_up.side_effect = lambda *_: order.append("up")
+        mock_apply.side_effect = lambda *_: order.append("apply")
+        mock_init.side_effect = lambda *_: order.append("init_db")
+        mock_wait.side_effect = lambda *_: order.append("wait")
         module.up()
         mock_certs.assert_called_once_with(module.ROOT / "certs")
         mock_up.assert_called_once_with(module.COMPOSE_FILE)
         mock_init.assert_called_once()
         mock_wait.assert_called_once()
         mock_apply.assert_called_once_with({}, {s: False for s in NAMES})
+        self.assertEqual(order, ["certs", "up", "apply", "init_db", "wait"])
 
     @patch("domain.targets.vampi.compose.down")
     def test_down_calls_compose_down(self, mock_down):

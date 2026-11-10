@@ -40,7 +40,7 @@ TARGET = Target(
 _HTTP_BLOCK = "    return 301 https://$host:8446$request_uri;"
 _HTTP_PLAIN = (
     "    location / {\n"
-    "        proxy_pass http://juice-shop:3000;\n"
+    "        proxy_pass http://juice-shop;\n"
     "        proxy_http_version 1.1;\n"
     "        proxy_set_header Host $host;\n"
     "        proxy_set_header X-Real-IP $remote_addr;\n"
@@ -51,7 +51,7 @@ _HTTP_PLAIN = (
 _DEBUG_BASELINE = "    location ^~ /rest/admin/ { return 403; }"
 _DEBUG_DRIFT = (
     "    location ^~ /rest/admin/ {\n"
-    "        proxy_pass http://juice-shop:3000;\n"
+    "        proxy_pass http://juice-shop;\n"
     "        proxy_http_version 1.1;\n"
     "        proxy_set_header Host $host;\n"
     "        proxy_set_header X-Real-IP $remote_addr;\n"
@@ -135,8 +135,8 @@ def _wait_for_ready(timeout: int = 180) -> None:
 def up() -> None:
     certs.ensure_certs(CERT_DIR)
     compose.up(COMPOSE_FILE)
-    _wait_for_ready()
-    apply({}, read_state())
+    apply({}, read_state())   # the controlled host now serves the configured server blocks
+    _wait_for_ready()         # poll until the application answers with a status below 500
 
 
 def down() -> None:

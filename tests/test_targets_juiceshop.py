@@ -42,7 +42,7 @@ class JuiceShopRenderTests(unittest.TestCase):
         cfg = module.nginx_config({**{s: False for s in NAMES}, "http-plain": True})
         port80 = cfg.split("server {")[1]
         self.assertNotIn("return 301", port80)
-        self.assertIn("proxy_pass http://juice-shop:3000;", port80)
+        self.assertIn("proxy_pass http://juice-shop;", port80)
 
     def test_baseline_blocks_the_admin_api(self):
         cfg = module.nginx_config({s: False for s in NAMES})
@@ -52,7 +52,13 @@ class JuiceShopRenderTests(unittest.TestCase):
         cfg = module.nginx_config({**{s: False for s in NAMES}, "api-debug": True})
         self.assertNotIn("location ^~ /rest/admin/ { return 403; }", cfg)
         self.assertIn("location ^~ /rest/admin/", cfg)
-        self.assertIn("proxy_pass http://juice-shop:3000;", cfg)
+        self.assertIn("proxy_pass http://juice-shop;", cfg)
+
+    def test_proxy_pass_references_upstream_group_without_port(self):
+        # Template location / and DEBUG_LOCATION drift must not carry :3000 on the group.
+        for state in ({s: False for s in NAMES}, {s: True for s in NAMES}):
+            cfg = module.nginx_config(state)
+            self.assertNotIn("proxy_pass http://juice-shop:3000", cfg)
 
     def test_upstream_points_at_the_benchmark_container(self):
         cfg = module.nginx_config({s: False for s in NAMES})
@@ -115,15 +121,21 @@ class JuiceShopLifecycleTests(unittest.TestCase):
     @patch("domain.targets.juiceshop.apply")
     @patch("domain.targets.juiceshop.read_state")
     @patch("domain.targets.juiceshop._wait_for_ready")
-    def test_up_ensures_certs_starts_waits_and_reapplies_state(
+    def test_up_ensures_certs_starts_applies_then_waits_and_reapplies_state(
         self, mock_wait, mock_read, mock_apply, mock_certs, mock_up
     ):
         mock_read.return_value = {s: False for s in NAMES}
+        order = []
+        mock_certs.side_effect = lambda *_: order.append("certs")
+        mock_up.side_effect = lambda *_: order.append("up")
+        mock_apply.side_effect = lambda *_: order.append("apply")
+        mock_wait.side_effect = lambda *_: order.append("wait")
         module.up()
         mock_certs.assert_called_once_with(module.ROOT / "certs")
         mock_up.assert_called_once_with(module.COMPOSE_FILE)
         mock_wait.assert_called_once()
         mock_apply.assert_called_once_with({}, {s: False for s in NAMES})
+        self.assertEqual(order, ["certs", "up", "apply", "wait"])
 
     @patch("domain.targets.juiceshop.compose.down")
     def test_down_calls_compose_down(self, mock_down):
