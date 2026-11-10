@@ -44,6 +44,12 @@ class DemocommerceRenderTests(unittest.TestCase):
         self.assertIn("try_files $uri $uri/ /index.html;", port80)
         self.assertNotIn("proxy_pass", port80)
 
+    def test_port80_server_block_declares_root_and_index_for_static_bundle(self):
+        cfg = module.nginx_config({s: False for s in NAMES})
+        port80 = cfg.split("server {")[1]          # the listen-80 server block is first in the template
+        self.assertIn("root /usr/share/nginx/html;", port80)
+        self.assertIn("index index.html;", port80)
+
     def test_baseline_masks_the_internal_profile_endpoint(self):
         cfg = module.nginx_config({s: False for s in NAMES})
         self.assertIn("location = /api/internal/security-profile { return 404; }", cfg)

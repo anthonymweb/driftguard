@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from urllib.parse import urlparse
 
 from . import config, state
@@ -106,6 +107,62 @@ def _cmd_truth(args) -> int:
     return 0
 
 
+def _expected_observation(expected_enabled: bool) -> str:
+    return "present" if expected_enabled else "absent"
+
+
+def _scenario_match(expected_enabled: bool, observed: str) -> tuple[str, bool]:
+    expected_obs = _expected_observation(expected_enabled)
+    if observed == "unknown":
+        match = False  # unknown while UP is mismatch
+    else:
+        match = observed == expected_obs
+    return expected_obs, match
+
+
+def _state_mismatches(target, intended_state: dict[str, bool], probes: dict) -> dict[str, dict]:
+    mismatches = {}
+    for s in target.scenarios:
+        expected_enabled = bool(intended_state.get(s.name, False))
+        observed = probes[s.name]()
+        expected_obs, match = _scenario_match(expected_enabled, observed)
+        if not match:
+            mismatches[s.name] = {
+                "observed": observed,
+                "expected": expected_obs,
+            }
+    return mismatches
+
+
+def _wait_for_state(target_name: str, mod, intended_state: dict[str, bool],
+                    timeout: float = 30.0, poll_interval: float = 0.25) -> int:
+    target = TARGETS[target_name]
+    if _is_down(target):
+        print(f"{target_name}: target is DOWN, skipping live-state wait",
+              file=sys.stderr)
+        return 0
+    deadline = time.monotonic() + timeout
+    last_mismatches = None
+    while True:
+        probes = mod.probes()
+        mismatches = _state_mismatches(target, intended_state, probes)
+        if not mismatches:
+            return 0
+        last_mismatches = mismatches
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(poll_interval)
+    details = ", ".join(
+        f"{name}: observed {info['observed']} expected {info['expected']}"
+        for name, info in sorted((last_mismatches or {}).items())
+    )
+    print(
+        f"{target_name}: live state did not settle within {timeout:.1f}s ({details})",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def _cmd_verify(args) -> int:
     result = {}
     failed = False
@@ -120,16 +177,9 @@ def _cmd_verify(args) -> int:
         probes = mod.probes()
         tresult = {}
         for s in target.scenarios:
-            expected_state = recorded.get(s.name, False)
+            expected_enabled = bool(recorded.get(s.name, False))
             observed = probes[s.name]()
-            if expected_state:
-                expected_obs = "present"
-            else:
-                expected_obs = "absent"
-            if observed == "unknown":
-                match = False  # unknown while UP is mismatch
-            else:
-                match = observed == expected_obs
+            expected_obs, match = _scenario_match(expected_enabled, observed)
             if not match:
                 failed = True
             tresult[s.name] = {
@@ -198,7 +248,7 @@ def _cmd_toggle(args, enable: bool) -> int:
     current = dict(previous)
     current[args.scenario] = enable
     mod.apply(previous, current)
-    return 0
+    return _wait_for_state(args.target, mod, current)
 
 
 def _cmd_reset(args) -> int:
@@ -211,6 +261,9 @@ def _cmd_reset(args) -> int:
         previous = mod.read_state()
         current = {s.name: False for s in target.scenarios}
         mod.apply(previous, current)
+        rc = _wait_for_state(name, mod, current)
+        if rc:
+            return rc
     return 0
 
 

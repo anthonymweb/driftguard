@@ -206,5 +206,74 @@ class CliTests(unittest.TestCase):
         m2.up.assert_not_called()
 
 
+class CliWaitForStateTests(unittest.TestCase):
+    def test_wait_for_state_returns_success_when_probes_already_agree(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, probes={"s1": lambda: "absent", "s2": lambda: "present"})
+        intended = {"s1": False, "s2": True}
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "_is_down", return_value=False), \
+             mock.patch.object(cli.time, "sleep") as sleep_mock:
+            rc = cli._wait_for_state(target.name, mod, intended, timeout=30.0, poll_interval=0.25)
+        self.assertEqual(rc, 0)
+        sleep_mock.assert_not_called()
+
+    def test_wait_for_state_times_out_and_reports_when_probes_never_agree(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, probes={"s1": lambda: "present", "s2": lambda: "absent"})
+        intended = {"s1": False, "s2": False}
+        # monotonic: first check -> 0, loop condition sees >= deadline after check
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "_is_down", return_value=False), \
+             mock.patch.object(cli.time, "sleep"), \
+             mock.patch.object(cli.time, "monotonic", side_effect=[0.0, 1.0, 31.0]), \
+             mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            rc = cli._wait_for_state(target.name, mod, intended, timeout=30.0, poll_interval=0.25)
+        self.assertEqual(rc, 1)
+        self.assertIn("did not settle", err.getvalue())
+        self.assertIn("s1", err.getvalue())
+
+    def test_on_invokes_wait_for_state_after_apply(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, state={"s1": False, "s2": False})
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "MODULES", {target.name: mod}), \
+             mock.patch.object(cli, "_wait_for_state", return_value=0) as wait_mock, \
+             redirect_stdout(io.StringIO()):
+            rc = cli.main(["on", target.name, "s1"])
+        self.assertEqual(rc, 0)
+        mod.apply.assert_called_once_with({"s1": False, "s2": False}, {"s1": True, "s2": False})
+        wait_mock.assert_called_once_with(target.name, mod, {"s1": True, "s2": False})
+
+    def test_off_invokes_wait_for_state_after_apply(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, state={"s1": True, "s2": False})
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "MODULES", {target.name: mod}), \
+             mock.patch.object(cli, "_wait_for_state", return_value=0) as wait_mock, \
+             redirect_stdout(io.StringIO()):
+            rc = cli.main(["off", target.name, "s1"])
+        self.assertEqual(rc, 0)
+        mod.apply.assert_called_once_with({"s1": True, "s2": False}, {"s1": False, "s2": False})
+        wait_mock.assert_called_once_with(target.name, mod, {"s1": False, "s2": False})
+
+    def test_reset_invokes_wait_for_state_after_apply(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, state={"s1": True, "s2": True})
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "MODULES", {target.name: mod}), \
+             mock.patch.object(cli, "_wait_for_state", return_value=0) as wait_mock, \
+             redirect_stdout(io.StringIO()):
+            rc = cli.main(["reset", target.name])
+        self.assertEqual(rc, 0)
+        mod.apply.assert_called_once_with({"s1": True, "s2": True}, {"s1": False, "s2": False})
+        wait_mock.assert_called_once_with(target.name, mod, {"s1": False, "s2": False})
+
+
 if __name__ == "__main__":
     unittest.main()

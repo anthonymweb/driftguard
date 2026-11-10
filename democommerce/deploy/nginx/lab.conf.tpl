@@ -3,6 +3,8 @@ upstream app { server api:8000; }
 server {
     listen 80 default_server;
     server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
     {{HTTP_BLOCK}}
 }
 
