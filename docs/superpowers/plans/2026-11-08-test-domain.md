@@ -478,7 +478,7 @@ def reload_nginx(compose_file: Path) -> None   # exec -T nginx nginx -s reload, 
 def recreate(compose_file: Path, override: Path | None = None) -> None   # up -d --force-recreate
 ```
 
-**Compose-file ruling (pre-flight, Task 6 review):** the helpers take the compose **file path** explicitly, never a directory. `docker compose -f <file>` is then always explicit, no inference from cwd or directory contents, and Task 9's `demcommerce/deploy/lab.compose.yaml` works without special-casing — `demcommerce/deploy/compose.yaml` (the app's own deployment file, never modified or reused) can never be picked up by accident. Callers pass `ROOT / "<target>/deploy/compose.yaml"` or the lab-specific file as appropriate.
+**Compose-file ruling (pre-flight, Task 6 review):** the helpers take the compose **file path** explicitly, never a directory. `docker compose -f <file>` is then always explicit, no inference from cwd or directory contents, and Task 9's `democommerce/deploy/lab.compose.yaml` works without special-casing — `democommerce/deploy/compose.yaml` (the app's own deployment file, never modified or reused) can never be picked up by accident. Callers pass `ROOT / "<target>/deploy/compose.yaml"` or the lab-specific file as appropriate.
 
 - [ ] **Step 1: Write the failing test**
 
