@@ -102,9 +102,12 @@ def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     compose.validate_nginx_config(COMPOSE_FILE)
     prev_port = bool(previous.get("port-open"))
     curr_port = bool(current.get("port-open"))
-    if prev_port != curr_port:
+    recreated = prev_port != curr_port
+    if recreated:
         compose.recreate(COMPOSE_FILE, OVERRIDE_PATH if curr_port else None)
     compose.reload_nginx(COMPOSE_FILE)
+    if recreated:
+        _init_db()
     state.write_state(STATE_PATH, current)
 
 

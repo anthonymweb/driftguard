@@ -68,18 +68,21 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi.compose.reload_nginx")
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
-    def test_apply_writes_config_and_reloads(self, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._init_db")
+    def test_apply_writes_config_and_reloads(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         state = {s: False for s in NAMES}
         module.apply(state, state)
         mock_write.assert_called_once()
         mock_reload.assert_called_once_with(module.COMPOSE_FILE)
         mock_recreate.assert_not_called()
+        mock_init.assert_not_called()
 
     @patch("domain.targets.vampi.compose.validate_nginx_config")
     @patch("domain.targets.vampi.compose.reload_nginx")
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
-    def test_apply_enables_port_open_uses_override(self, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._init_db")
+    def test_apply_enables_port_open_uses_override(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         previous = {s: False for s in NAMES}
         current = {**previous, "port-open": True}
         module.apply(previous, current)
@@ -90,7 +93,8 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi.compose.reload_nginx")
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
-    def test_apply_disables_port_open_recreates_without_override(self, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._init_db")
+    def test_apply_disables_port_open_recreates_without_override(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         previous = {**{s: False for s in NAMES}, "port-open": True}
         current = {s: False for s in NAMES}
         module.apply(previous, current)
@@ -101,7 +105,8 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi.compose.reload_nginx")
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
-    def test_apply_reloads_correct_compose_path(self, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._init_db")
+    def test_apply_reloads_correct_compose_path(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         module.apply({s: False for s in NAMES}, {s: False for s in NAMES})
         self.assertEqual(
             mock_reload.call_args[0][0],
@@ -136,6 +141,44 @@ class VampiApplyTests(unittest.TestCase):
             module.apply({s: False for s in NAMES}, {s: False for s in NAMES})
         mock_persist.assert_not_called()
         mock_reload.assert_not_called()
+
+    @patch("domain.targets.vampi.state.write_state")
+    @patch("domain.targets.vampi._init_db")
+    @patch("domain.targets.vampi.compose.reload_nginx")
+    @patch("domain.targets.vampi.compose.validate_nginx_config")
+    @patch("domain.targets.vampi._write_config")
+    @patch("domain.targets.vampi.compose.recreate")
+    def test_apply_reinitialises_db_before_persist_when_port_open_changes(
+        self, mock_recreate, mock_write, mock_validate, mock_reload, mock_init, mock_persist
+    ):
+        order = []
+        mock_recreate.side_effect = lambda *_: order.append("recreate")
+        mock_reload.side_effect = lambda *_: order.append("reload")
+        mock_init.side_effect = lambda *_: order.append("init_db")
+        mock_persist.side_effect = lambda *_: order.append("persist")
+        previous = {s: False for s in NAMES}
+        current = {**previous, "port-open": True}
+        module.apply(previous, current)
+        mock_init.assert_called_once()
+        self.assertIn("recreate", order)
+        self.assertIn("init_db", order)
+        self.assertIn("persist", order)
+        self.assertLess(order.index("recreate"), order.index("init_db"))
+        self.assertLess(order.index("init_db"), order.index("persist"))
+
+    @patch("domain.targets.vampi._init_db")
+    @patch("domain.targets.vampi.compose.validate_nginx_config")
+    @patch("domain.targets.vampi.compose.reload_nginx")
+    @patch("domain.targets.vampi._write_config")
+    @patch("domain.targets.vampi.compose.recreate")
+    def test_apply_does_not_reinitialise_db_when_port_open_unchanged(
+        self, mock_recreate, mock_write, mock_reload, mock_validate, mock_init
+    ):
+        previous = {**{s: False for s in NAMES}, "api-debug": True}
+        current = {**{s: False for s in NAMES}, "api-debug": False}
+        module.apply(previous, current)
+        mock_recreate.assert_not_called()
+        mock_init.assert_not_called()
 
 
 class VampiLifecycleTests(unittest.TestCase):
