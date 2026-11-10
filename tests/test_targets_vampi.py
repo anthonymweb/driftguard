@@ -145,7 +145,7 @@ class VampiLifecycleTests(unittest.TestCase):
     @patch("domain.targets.vampi.read_state")
     @patch("domain.targets.vampi._wait_for_ready")
     @patch("domain.targets.vampi._init_db")
-    def test_up_ensures_certs_starts_applies_initializes_then_waits(
+    def test_up_ensures_certs_starts_applies_waits_then_initializes(
         self, mock_init, mock_wait, mock_read, mock_apply, mock_certs, mock_up
     ):
         mock_read.return_value = {s: False for s in NAMES}
@@ -161,7 +161,7 @@ class VampiLifecycleTests(unittest.TestCase):
         mock_init.assert_called_once()
         mock_wait.assert_called_once()
         mock_apply.assert_called_once_with({}, {s: False for s in NAMES})
-        self.assertEqual(order, ["certs", "up", "apply", "init_db", "wait"])
+        self.assertEqual(order, ["certs", "up", "apply", "wait", "init_db"])
 
     @patch("domain.targets.vampi.compose.down")
     def test_down_calls_compose_down(self, mock_down):
@@ -184,9 +184,50 @@ class VampiReadinessTests(unittest.TestCase):
             called["url"] = req.full_url
             return FakeResp()
 
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen), \
+             patch("time.sleep"), \
+             patch("time.monotonic", side_effect=[0, 1]):
             module._init_db()
         self.assertEqual(called["url"], "https://127.0.0.1:8447/createdb")
+
+    def test_init_db_retries_until_request_succeeds(self):
+        import urllib.error
+
+        attempts = {"count": 0}
+
+        class FakeResp:
+            status = 200
+            def __enter__(self):
+                return self
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        def fake_urlopen(req, context=None, timeout=None):
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise urllib.error.URLError("refused")
+            return FakeResp()
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen), \
+             patch("time.sleep") as mock_sleep, \
+             patch("time.monotonic", side_effect=[0, 1, 2, 3, 4, 5]):
+            module._init_db(timeout=60)
+        self.assertEqual(attempts["count"], 3)
+        self.assertEqual(mock_sleep.call_count, 2)
+
+    def test_init_db_raises_runtime_error_with_url_after_timeout(self):
+        import urllib.error
+
+        def fake_urlopen(req, context=None, timeout=None):
+            raise urllib.error.URLError("refused")
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen), \
+             patch("time.sleep"), \
+             patch("time.monotonic", side_effect=[0, 1, 61]):
+            with self.assertRaises(RuntimeError) as ctx:
+                module._init_db(timeout=60)
+        self.assertIn("https://127.0.0.1:8447/createdb", str(ctx.exception))
+        self.assertIn("vampi", str(ctx.exception).lower())
 
     def test_wait_for_ready_polls_root_until_status_below_500(self):
         import urllib.error

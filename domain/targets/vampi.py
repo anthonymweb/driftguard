@@ -115,18 +115,25 @@ def _ssl_context() -> ssl.SSLContext:
     return ctx
 
 
-def _init_db() -> None:
-    """Call GET /createdb once through the controlled host."""
+def _init_db(timeout: int = 60) -> None:
+    """Call GET /createdb through the controlled host, retrying until it succeeds."""
+    deadline = time.monotonic() + timeout
     url = "https://127.0.0.1:8447/createdb"
-    req = urllib.request.Request(url)
-    try:
-        with urllib.request.urlopen(req, context=_ssl_context(), timeout=30):
+    last_error: Exception | None = None
+    while time.monotonic() < deadline:
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, context=_ssl_context(), timeout=30):
+                return
+        except urllib.error.HTTPError:
+            # Any HTTP response means the endpoint was reached.
             return
-    except urllib.error.HTTPError:
-        # Any HTTP response means the endpoint was reached.
-        return
-    except Exception as exc:  # noqa: BLE001 - best-effort init
-        raise RuntimeError(f"vampi /createdb initialization failed at {url}: {exc}") from exc
+        except Exception as exc:  # noqa: BLE001 - init polling
+            last_error = exc
+        time.sleep(2)
+    raise RuntimeError(
+        f"vampi /createdb initialization failed at {url} within {timeout}s: {last_error}"
+    )
 
 
 def _wait_for_ready(timeout: int = 180) -> None:
@@ -157,8 +164,8 @@ def up() -> None:
     certs.ensure_certs(CERT_DIR)
     compose.up(COMPOSE_FILE)
     apply({}, read_state())   # the controlled host now serves the configured server blocks
-    _init_db()                # /createdb is reachable now
     _wait_for_ready()         # poll until the application answers with a status below 500
+    _init_db()                # initialise the database after the application is ready
 
 
 def down() -> None:
