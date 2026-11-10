@@ -1,5 +1,7 @@
 """DemoCommerce lab stack target wrapper."""
 import json
+import os
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -46,7 +48,14 @@ _DEBUG_DRIFT = (
 
 def _write_config(content: str) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(content)
+    fd, tmp = tempfile.mkstemp(dir=CONFIG_PATH.parent, prefix=CONFIG_PATH.name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+        os.replace(tmp, CONFIG_PATH)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 def read_state() -> dict[str, bool]:
@@ -76,6 +85,7 @@ def nginx_config(state: dict[str, bool]) -> str:
 
 def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     _write_config(nginx_config(current))
+    compose.validate_nginx_config(COMPOSE_FILE)
     compose.reload_nginx(COMPOSE_FILE)
     state.write_state(STATE_PATH, current)
 

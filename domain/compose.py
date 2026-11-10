@@ -45,6 +45,19 @@ def reload_nginx(compose_file: Path) -> None:
         check=False)
 
 
+def validate_nginx_config(compose_file: Path) -> None:
+    """Raise if nginx would reject the configuration currently on disk."""
+    result = subprocess.run(
+        ["docker", "compose", *_files(compose_file),
+         "exec", "-T", "nginx", "nginx", "-t"],
+        check=False, capture_output=True, text=True)
+    output = ((result.stdout or "") + (result.stderr or "")).strip()
+    if "emerg" in output or "test failed" in output:
+        raise RuntimeError(output)
+    # If the exec failed without nginx diagnostics (e.g. container absent),
+    # tolerate it so reload_nginx's "missing container" behaviour is preserved.
+
+
 def recreate(compose_file: Path, override: Path | None = None) -> None:
     """Force-recreate the project's containers (`up -d --force-recreate`)."""
     subprocess.run(

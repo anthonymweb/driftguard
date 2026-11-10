@@ -68,19 +68,45 @@ class DemocommerceRenderTests(unittest.TestCase):
 
 
 class DemocommerceApplyTests(unittest.TestCase):
+    @patch("domain.targets.democommerce.compose.validate_nginx_config")
     @patch("domain.targets.democommerce.compose.reload_nginx")
     @patch("domain.targets.democommerce._write_config")
-    def test_apply_writes_config_and_reloads(self, mock_write, mock_reload):
+    def test_apply_writes_config_and_reloads(self, mock_write, mock_reload, mock_validate):
         state = {s: False for s in NAMES}
         module.apply({}, state)
         mock_write.assert_called_once()
         mock_reload.assert_called_once_with(module.COMPOSE_FILE)
 
+    @patch("domain.targets.democommerce.compose.validate_nginx_config")
     @patch("domain.targets.democommerce.compose.reload_nginx")
     @patch("domain.targets.democommerce._write_config")
-    def test_apply_reloads_correct_compose_path(self, mock_write, mock_reload):
+    def test_apply_reloads_correct_compose_path(self, mock_write, mock_reload, mock_validate):
         module.apply({}, {s: False for s in NAMES})
         self.assertEqual(mock_reload.call_args[0][0], module.ROOT / "democommerce/deploy/lab.compose.yaml")
+
+    @patch("domain.targets.democommerce.state.write_state")
+    @patch("domain.targets.democommerce.compose.reload_nginx")
+    @patch("domain.targets.democommerce.compose.validate_nginx_config")
+    @patch("domain.targets.democommerce._write_config")
+    def test_apply_validates_before_reload(self, mock_write, mock_validate, mock_reload, mock_persist):
+        order = []
+        mock_write.side_effect = lambda *_: order.append("write")
+        mock_validate.side_effect = lambda *_: order.append("validate")
+        mock_reload.side_effect = lambda *_: order.append("reload")
+        mock_persist.side_effect = lambda *_: order.append("persist")
+        module.apply({s: False for s in NAMES}, {s: False for s in NAMES})
+        self.assertEqual(order, ["write", "validate", "reload", "persist"])
+
+    @patch("domain.targets.democommerce.state.write_state")
+    @patch("domain.targets.democommerce.compose.reload_nginx")
+    @patch("domain.targets.democommerce.compose.validate_nginx_config")
+    @patch("domain.targets.democommerce._write_config")
+    def test_apply_does_not_persist_state_when_validation_fails(self, mock_write, mock_validate, mock_reload, mock_persist):
+        mock_validate.side_effect = RuntimeError("nginx: [emerg] test failed")
+        with self.assertRaises(RuntimeError):
+            module.apply({s: False for s in NAMES}, {s: False for s in NAMES})
+        mock_persist.assert_not_called()
+        mock_reload.assert_not_called()
 
 
 class DemocommerceLifecycleTests(unittest.TestCase):
@@ -107,18 +133,20 @@ class DemocommerceStateTests(unittest.TestCase):
             state = module.read_state()
         self.assertEqual(state, {s: False for s in NAMES})
 
+    @patch("domain.targets.democommerce.compose.validate_nginx_config")
     @patch("domain.targets.democommerce.compose.reload_nginx")
     @patch("domain.targets.democommerce._write_config")
-    def test_apply_persists_state_so_read_state_returns_current(self, mock_write, mock_reload):
+    def test_apply_persists_state_so_read_state_returns_current(self, mock_write, mock_reload, mock_validate):
         with tempfile.TemporaryDirectory() as tmp:
             with patch.object(module, "STATE_PATH", Path(tmp) / "state.json"):
                 current = {**{s: False for s in NAMES}, "tls-legacy": True}
                 module.apply({s: False for s in NAMES}, current)
                 self.assertEqual(module.read_state(), current)
 
+    @patch("domain.targets.democommerce.compose.validate_nginx_config")
     @patch("domain.targets.democommerce.compose.reload_nginx")
     @patch("domain.targets.democommerce._write_config")
-    def test_successive_toggles_accumulate(self, mock_write, mock_reload):
+    def test_successive_toggles_accumulate(self, mock_write, mock_reload, mock_validate):
         with tempfile.TemporaryDirectory() as tmp:
             with patch.object(module, "STATE_PATH", Path(tmp) / "state.json"):
                 all_false = {s: False for s in NAMES}
@@ -129,6 +157,21 @@ class DemocommerceStateTests(unittest.TestCase):
                 self.assertEqual(module.read_state(), second)
                 self.assertTrue(module.read_state()["tls-legacy"])
                 self.assertTrue(module.read_state()["http-plain"])
+
+
+class DemocommerceAtomicWriteTests(unittest.TestCase):
+    def test_write_config_writes_atomically_via_replace(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "conf.d" / "default.conf"
+            with patch.object(module, "CONFIG_PATH", target), \
+                 patch("domain.targets.democommerce.os.replace", wraps=os.replace) as mock_replace, \
+                 patch("domain.targets.democommerce.tempfile.mkstemp", wraps=tempfile.mkstemp) as mock_mkstemp:
+                module._write_config("hello")
+            mock_mkstemp.assert_called_once()
+            mock_replace.assert_called_once()
+            self.assertEqual(target.read_text(), "hello")
+            self.assertFalse(list(target.parent.glob("*.tmp")))
 
 
 if __name__ == "__main__":
