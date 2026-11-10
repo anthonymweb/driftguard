@@ -1,0 +1,48 @@
+name: democommerce-lab
+
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      DEMO_DATABASE_URL: sqlite:////data/democommerce.db
+      DEMO_CORS_ORIGINS: https://127.0.0.1:8444
+      DEMO_SESSION_COOKIE_SECURE: "1"
+      DEMO_TEST_PROFILES_ENABLED: "0"
+      DEMO_TRUSTED_PROXY_IPS: 172.30.50.2
+      DEMO_LOCAL_PROXY_CLIENTS: 127.0.0.1
+    volumes:
+      - democommerce_lab_data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+    networks:
+      democommerce_lab:
+        ipv4_address: 172.30.50.3
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "127.0.0.1:8444:443"
+      - "127.0.0.1:8082:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../certs:/etc/nginx/certs:ro
+      - ../frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      democommerce_lab:
+        ipv4_address: 172.30.50.2
+
+volumes:
+  democommerce_lab_data:
+
+networks:
+  democommerce_lab:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.50.0/24
