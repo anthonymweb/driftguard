@@ -3,7 +3,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-from .. import ROOT, certs, compose, render
+from .. import ROOT, certs, compose, render, state
 from ..model import ProbeResult, Scenario, Target
 from ..probes import probe_api_path, probe_port_open, probe_tls_legacy
 
@@ -80,6 +80,7 @@ def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     if prev_port != curr_port:
         compose.recreate(COMPOSE_FILE, OVERRIDE_PATH if curr_port else None)
     compose.reload_nginx(COMPOSE_FILE)
+    state.write_state(STATE_PATH, current)
 
 
 def up() -> None:

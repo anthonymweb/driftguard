@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -118,6 +119,31 @@ class CivicPortalStateTests(unittest.TestCase):
         with patch.object(module, "STATE_PATH", Path("/nonexistent/state.json")):
             state = module.read_state()
         self.assertEqual(state, {s: False for s in NAMES})
+
+    @patch("domain.targets.civicportal.compose.reload_nginx")
+    @patch("domain.targets.civicportal._write_config")
+    @patch("domain.targets.civicportal.compose.recreate")
+    def test_apply_persists_state_so_read_state_returns_current(self, mock_recreate, mock_write, mock_reload):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(module, "STATE_PATH", Path(tmp) / "state.json"):
+                current = {**{s: False for s in NAMES}, "tls-legacy": True}
+                module.apply({s: False for s in NAMES}, current)
+                self.assertEqual(module.read_state(), current)
+
+    @patch("domain.targets.civicportal.compose.reload_nginx")
+    @patch("domain.targets.civicportal._write_config")
+    @patch("domain.targets.civicportal.compose.recreate")
+    def test_successive_toggles_accumulate(self, mock_recreate, mock_write, mock_reload):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(module, "STATE_PATH", Path(tmp) / "state.json"):
+                all_false = {s: False for s in NAMES}
+                first = {**all_false, "tls-legacy": True}
+                second = {**all_false, "tls-legacy": True, "api-debug": True}
+                module.apply(all_false, first)
+                module.apply(first, second)
+                self.assertEqual(module.read_state(), second)
+                self.assertTrue(module.read_state()["tls-legacy"])
+                self.assertTrue(module.read_state()["api-debug"])
 
 
 if __name__ == "__main__":

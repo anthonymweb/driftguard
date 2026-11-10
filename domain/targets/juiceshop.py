@@ -7,7 +7,7 @@ import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 
-from .. import ROOT, certs, compose, render
+from .. import ROOT, certs, compose, render, state
 from ..model import ProbeResult, Scenario, Target
 from ..probes import probe_api_path, probe_http_plain, probe_tls_legacy
 
@@ -92,6 +92,7 @@ def nginx_config(state: dict[str, bool]) -> str:
 def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     _write_config(nginx_config(current))
     compose.reload_nginx(COMPOSE_FILE)
+    state.write_state(STATE_PATH, current)
 
 
 def _wait_for_ready(timeout: int = 180) -> None:
