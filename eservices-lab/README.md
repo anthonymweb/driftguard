@@ -70,3 +70,7 @@ If `verify` shows `tls-legacy` as False after `on`, check `docker compose logs n
 ## Notes
 The baseline uses a self-signed cert, so scanners flag it every scan. It is not a seeded scenario, so it is not in the ground truth.
 Everything binds to 127.0.0.1. Never expose this lab to the internet.
+
+**Supported entry point:** use `python3 domain.py` from the repository root to control this domain.
+`domain.py` manages bring-up, scenario toggles, marks, verification, and ground truth across all targets.
+`lab.py mark` no longer feeds the authoritative log; use `python3 domain.py mark <label>` instead.
