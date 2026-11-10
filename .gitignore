@@ -8,6 +8,8 @@ certs/
 ground_truth.csv
 scans.json
 state.json
+lab.state.json
 nginx/conf.d/*.conf
+**/nginx/conf.d/*.conf
 .superpowers/
 .worktrees/
