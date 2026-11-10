@@ -61,10 +61,16 @@ def read_state() -> dict[str, bool]:
 
 
 def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
+    """Drive every scenario to the intended state in ``current``.
+
+    ``previous`` is accepted for interface compatibility but ignored: converging
+    to the absolute intended state (rather than diffing against a possibly-stale
+    recorded state) keeps the live configuration correct even when
+    ``eservices-lab/state.json`` has diverged. ``lab.py on|off`` is idempotent.
+    """
     for scenario in TARGET.scenarios:
         name = scenario.name
-        if current.get(name) != previous.get(name):
-            _lab("on" if current.get(name) else "off", name)
+        _lab("on" if current.get(name) else "off", name)
 
 
 def nginx_config(state: dict[str, bool]) -> str | None:

@@ -51,11 +51,20 @@ class GroundTruthRow:
 
     def __post_init__(self) -> None:
         # Area guard: any row that names a scenario or an area must carry one of the
-        # three frozen audit areas, so no finding_key can ever leave {TLS, Network, API}
-        # (spec §6.4). Pure event rows with no scenario carry no area and pass through.
-        if (self.scenario or self.category) and self.category not in AREA_LABELS:
-            raise ValueError(
-                f"ground-truth area {self.category!r} is not one of {sorted(AREA_LABELS)}")
+        # three frozen audit areas, and a scenario-bearing row must bind its
+        # finding_key to the frozen <target>/<category>/<scenario> form (spec §6.4),
+        # so the scanner's findings cannot desynchronise from the ground truth. Pure
+        # event rows with no scenario carry no area and pass through.
+        if self.scenario or self.category:
+            if self.category not in AREA_LABELS:
+                raise ValueError(
+                    f"ground-truth area {self.category!r} is not one of {sorted(AREA_LABELS)}")
+            if self.scenario:
+                expected_key = f"{self.target}/{self.category}/{self.scenario}"
+                if self.finding_key != expected_key:
+                    raise ValueError(
+                        f"finding_key {self.finding_key!r} does not match "
+                        f"{expected_key!r} (target/category/scenario)")
 
 
 def record_scan(label: str, states: dict[str, dict[str, bool] | None]) -> None:

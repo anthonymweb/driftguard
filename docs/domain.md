@@ -160,6 +160,8 @@ locally under `certs/` for the lab hosts.
   copied.** Their deployable assets are produced by the target build pipelines
   in `democommerce/` and `civic-services-portal/` (built artifacts under their
   respective `dist/`/deploy outputs) rather than vendored as static copies.
+  Copying the prebuilt bundle from the main checkout is the accepted fallback
+  when npm is unavailable.
 - **Juice Shop `api-debug` observable:** the admin API path used for the
   `api-debug` scenario is `GET /rest/admin/application-configuration` (served on
   the controlled host at `https://127.0.0.1:8446`). Baseline returns 403 via the

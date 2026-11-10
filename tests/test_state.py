@@ -125,6 +125,26 @@ class StateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             make_row(category="TSL", finding_key="eservices-lab/TSL/tls-legacy")
 
+    def test_row_writer_rejects_finding_key_disagreeing_with_columns(self):
+        # key names the wrong scenario for the row's own target/category/scenario.
+        with self.assertRaises(ValueError):
+            make_row(scenario="tls-legacy", category="TLS",
+                     finding_key="eservices-lab/TLS/cert-mismatch")
+        # key names the wrong target.
+        with self.assertRaises(ValueError):
+            make_row(target="juice-shop", scenario="tls-legacy", category="TLS",
+                     finding_key="eservices-lab/TLS/tls-legacy")
+        # key names the wrong area.
+        with self.assertRaises(ValueError):
+            make_row(scenario="tls-legacy", category="TLS",
+                     finding_key="eservices-lab/Network/tls-legacy")
+
+    def test_row_writer_accepts_well_formed_scenario_row(self):
+        row = make_row(target="juice-shop", scenario="api-debug", category="API",
+                       expected_finding="Admin API endpoint publicly reachable",
+                       finding_key="juice-shop/API/api-debug")
+        self.assertEqual(row.finding_key, "juice-shop/API/api-debug")
+
 
 if __name__ == "__main__":
     unittest.main()

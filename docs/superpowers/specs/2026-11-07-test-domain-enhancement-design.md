@@ -153,7 +153,7 @@ VAmPI's `/users/v1/_debug` is a real, recognised OWASP API Security issue (API3:
 ### 6.3 Controller structure
 
 ```
-eservices-lab/
+<repo-root>/
 ├── domain.py                  # top-level CLI: up | down | status | on | off | reset | mark | truth | verify
 ├── domain/
 │   ├── __init__.py
@@ -169,12 +169,15 @@ eservices-lab/
 │       ├── civicportal.py
 │       ├── juiceshop.py
 │       └── vampi.py
+├── eservices-lab/             # wrapped case-study lab (lab.py, app, nginx, compose)
+├── democommerc/               # democommerce application
+├── civic-services-portal/     # civic portal application + deploy assets
+├── targets/
+│   ├── juiceshop/             # compose.yaml + nginx/site.conf.tpl  (no benchmark source)
+│   └── vampi/                 # compose.yaml + nginx/site.conf.tpl  (no benchmark source)
 ├── certs/                     # shared localhost + mismatch certificates
 ├── ground_truth.csv           # AUTHORITATIVE: one row per (target, event), with a `target` column
-├── scans.json                 # one marked scan records the state of all five targets
-└── targets/
-    ├── juiceshop/             # compose.yaml + nginx/site.conf.tpl  (no benchmark source)
-    └── vampi/                 # compose.yaml + nginx/site.conf.tpl  (no benchmark source)
+└── scans.json                 # one marked scan records the state of all five targets
 ```
 
 Plus, inside the applications we own:
@@ -288,12 +291,12 @@ The civic portal's `/api/v1/admin/debug` response follows exactly this pattern (
 **CLI surface (the simulation's interface).** The live-demo simulation drives the domain by shelling out to `domain.py`; it does not import the package. The subcommand shapes are fixed now so the two deliverables cannot diverge:
 
 ```
-python domain.py up [target] | down [target] | status [--json]
-python domain.py on <target> <scenario> | off <target> <scenario>
-python domain.py reset [target]
-python domain.py mark <label>            # snapshots ALL five targets in one scan record
-python domain.py truth [--json]
-python domain.py verify [--json]         # exit code 0 only if every probe matches
+python3 domain.py up [target] | down [target] | status [--json]
+python3 domain.py on <target> <scenario> | off <target> <scenario>
+python3 domain.py reset [target]
+python3 domain.py mark <label>            # snapshots ALL five targets in one scan record
+python3 domain.py truth [--json]
+python3 domain.py verify [--json]         # exit code 0 only if every probe matches
 ```
 
 `--json` is available on `status`, `truth` and `verify` so the simulation and the evaluation script parse output instead of scraping tables. `mark` is invoked by whoever runs the scan — the operator during manual runs, the simulation during the demo.

@@ -53,13 +53,20 @@ All data is fake (`TEST-0001`, `CMTEST...`), so it doubles as the seeded data fo
 | Admin/debug API | /api/v1/admin/debug  (403 at baseline) |
 | Legacy admin | localhost:8081 (closed at baseline) |
 
+> **Supported entry point for the whole domain:** run `python3 domain.py` from the
+> repository root to bring the domain up, toggle scenarios, mark scans, verify, and
+> read ground truth across all targets. The `python lab.py …` commands below remain
+> valid for operating this wrapped case-study lab in isolation (and the domain
+> controller uses `lab.py` internally for lifecycle and toggles), but `lab.py mark`
+> no longer feeds the authoritative log — use `python3 domain.py mark <label>`.
+
 ## Drift scenarios (reversible): `python lab.py on|off <name>`
 `tls-legacy` (TLS 1.0/1.1 accepted) | `cert-mismatch` | `http-plain` (no HTTPS redirect) |
 `port-open` (legacy admin on :8081) | `api-debug` (debug endpoint exposed)
 
 ## Ground truth
 Run `python lab.py mark <label>` right after each DriftGuard scan, then `python lab.py truth`
-prints the expected NEW / FIXED / PERSISTENT / RECURRING per scenario per scan. Every change is also logged to `ground_truth.csv`.
+prints the expected NEW / FIXED / PERSISTENT / RECURRING per scenario per scan. Every change is also logged to `ground_truth.csv`. The note above clarifies that, for the domain-wide authoritative ground truth, marks must be recorded via `python3 domain.py mark <label>`.
 
 ## Tested vs not
 Tested (Flask backend + nginx 1.24/OpenSSL 3 on Linux): baseline and all 5 scenarios on/off confirmed by independent

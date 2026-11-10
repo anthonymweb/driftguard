@@ -27,7 +27,7 @@ class EservicesTargetTests(unittest.TestCase):
         self.assertEqual(state["http-plain"], False)
         self.assertEqual(state["api-debug"], False)
 
-    def test_apply_delegates_to_lab_py(self):
+    def test_apply_drives_every_scenario_to_intended_state(self):
         previous = {
             "tls-legacy": False, "cert-mismatch": False, "http-plain": False,
             "port-open": False, "api-debug": False,
@@ -40,9 +40,36 @@ class EservicesTargetTests(unittest.TestCase):
             eservices.apply(previous, current)
         argv_calls = [call.args[0] for call in mock_run.call_args_list]
         lab = str(eservices.LAB_PY)
-        self.assertIn(["python3", lab, "on", "tls-legacy"], argv_calls)
-        self.assertIn(["python3", lab, "on", "port-open"], argv_calls)
-        self.assertEqual(len(argv_calls), 2)
+        self.assertEqual(argv_calls, [
+            ["python3", lab, "on", "tls-legacy"],
+            ["python3", lab, "off", "cert-mismatch"],
+            ["python3", lab, "off", "http-plain"],
+            ["python3", lab, "on", "port-open"],
+            ["python3", lab, "off", "api-debug"],
+        ])
+
+    def test_apply_converges_when_previous_disagrees_with_live_state(self):
+        # recorded state claims tls-legacy is on, but the intended state turns it
+        # off: apply must still drive every scenario to current (not diff previous).
+        previous = {
+            "tls-legacy": True, "cert-mismatch": False, "http-plain": False,
+            "port-open": False, "api-debug": False,
+        }
+        current = {
+            "tls-legacy": False, "cert-mismatch": False, "http-plain": False,
+            "port-open": False, "api-debug": False,
+        }
+        with patch("domain.targets.eservices.subprocess.run") as mock_run:
+            eservices.apply(previous, current)
+        argv_calls = [call.args[0] for call in mock_run.call_args_list]
+        lab = str(eservices.LAB_PY)
+        self.assertEqual(argv_calls, [
+            ["python3", lab, "off", "tls-legacy"],
+            ["python3", lab, "off", "cert-mismatch"],
+            ["python3", lab, "off", "http-plain"],
+            ["python3", lab, "off", "port-open"],
+            ["python3", lab, "off", "api-debug"],
+        ])
 
     def test_nginx_config_is_not_reimplemented(self):
         self.assertIsNone(

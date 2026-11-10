@@ -47,12 +47,18 @@ def run(*args: str, capture: bool = False) -> subprocess.CompletedProcess[str]:
 def supported_scenarios() -> dict[str, set[str]]:
     proc = run("status", "--json", capture=True)
     data = json.loads(proc.stdout)
+    down: list[str] = []
     out: dict[str, set[str]] = {}
     for target, states in data.get("targets", {}).items():
         if states == "DOWN":
-            out[target] = set()
+            down.append(target)
         else:
             out[target] = set(states.keys())
+    if down:
+        names = ", ".join(sorted(down))
+        raise SystemExit(
+            f"target(s) DOWN: {names}. Bring the domain up before running the "
+            f"sequence (e.g. `python3 domain.py up` or `python3 domain.py up <target>`).")
     return out
 
 
