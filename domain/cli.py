@@ -135,7 +135,13 @@ def _state_mismatches(target, intended_state: dict[str, bool], probes: dict) -> 
 
 
 def _wait_for_state(target_name: str, mod, intended_state: dict[str, bool],
-                    timeout: float = 30.0, poll_interval: float = 0.25) -> int:
+                    timeout: float = 60.0, poll_interval: float = 0.25) -> int:
+    """Wait until the target's live behaviour matches *intended_state*.
+
+    ``timeout`` defaults to 60 s because a scenario that republishes a port
+    recreates the target's containers: on this machine that recreation takes
+    ~12 s, and 30 s proved flaky when it followed another recreation.
+    """
     target = TARGETS[target_name]
     if _is_down(target):
         print(f"{target_name}: target is DOWN, skipping live-state wait",
