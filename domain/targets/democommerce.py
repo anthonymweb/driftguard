@@ -33,9 +33,9 @@ TARGET = Target(
 
 _HTTP_BASELINE = "    return 301 https://$host:8444$request_uri;"
 _HTTP_PLAIN = "    location / { try_files $uri $uri/ /index.html; }"
-_API_BASELINE = "location = /api/internal/security-profile { return 404; }"
-_API_DEBUG = (
-    "location = /api/internal/security-profile { "
+_DEBUG_BASELINE = "    location = /api/internal/security-profile { return 404; }"
+_DEBUG_DRIFT = (
+    "    location = /api/internal/security-profile { "
     "proxy_pass http://app/api/internal/security-profile; "
     "proxy_set_header Host $host; "
     "proxy_set_header X-Real-IP $remote_addr; "
@@ -63,16 +63,15 @@ def nginx_config(state: dict[str, bool]) -> str:
     else:
         ssl_protocols = "TLSv1.2 TLSv1.3"
         ssl_ciphers = "HIGH:!aNULL:!MD5"
+    debug_location = _DEBUG_DRIFT if state.get("api-debug") else _DEBUG_BASELINE
     mapping = {
         "HTTP_BLOCK": http_block,
+        "DEBUG_LOCATION": debug_location,
         "CERT": "localhost",
         "SSL_PROTOCOLS": ssl_protocols,
         "SSL_CIPHERS": ssl_ciphers,
     }
-    cfg = render.render(template, mapping)
-    if state.get("api-debug"):
-        cfg = cfg.replace(_API_BASELINE, _API_DEBUG)
-    return cfg
+    return render.render(template, mapping)
 
 
 def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:

@@ -21,7 +21,7 @@ server {
     add_header Strict-Transport-Security "max-age=31536000" always;
     add_header X-Content-Type-Options "nosniff" always;
 
-    location = /api/internal/security-profile { return 404; }
+    {{DEBUG_LOCATION}}
 
     location /api/ {
         proxy_pass http://app;
