@@ -1,11 +1,28 @@
 # tests/test_classify.py
 import importlib.util
 import unittest
+from pathlib import Path
 
 from domain import ROOT
 from domain.classify import classify
 
-BACKEND_DRIFT = ROOT / "eservices-lab" / "backend" / "driftguard" / "drift.py"
+
+def _backend_drift_path() -> Path | None:
+    """Locate the DriftGuard backend's evidence classifier.
+
+    The backend is a sibling of this lab in the DriftGuard repository
+    (``backend/driftguard/drift.py``); the older layout kept it inside the
+    lab's own tree. The cross-check is only meaningful when the backend is
+    present, so its absence skips the test rather than failing it.
+    """
+    for candidate in (ROOT.parent / "backend" / "driftguard" / "drift.py",
+                      ROOT / "eservices-lab" / "backend" / "driftguard" / "drift.py"):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+BACKEND_DRIFT = _backend_drift_path()
 
 HISTORIES = [
     [False, True, True, False, True, True, True, True, True],
@@ -50,7 +67,11 @@ class ClassifyTests(unittest.TestCase):
     def test_agrees_with_driftguard_backend_classifier(self):
         """The evaluation compares ground truth (this module) against the
         backend's evidence classifier. They must not disagree."""
-        # Load eservices-lab/backend/driftguard/drift.py by path (stdlib imports only),
+        if BACKEND_DRIFT is None:
+            self.skipTest(
+                "the DriftGuard backend is not beside this lab, so there is no "
+                "second classifier to cross-check against")
+        # Load the backend's drift.py by path (stdlib imports only),
         # then for every index i >= 1 compare:
         #   domain label  vs  backend.classify(current, previous, earlier).get(F, "NO DRIFT")
         # where current/previous/earlier are {F} or set() built from the history.

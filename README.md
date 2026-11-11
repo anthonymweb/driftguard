@@ -1,153 +1,115 @@
-# DriftGuard — Controlled Test Domain
+# DriftGuard
 
-A **controlled test domain** for DriftGuard, a drift-detection research project.
+A **drift-detection research project**: an engine that scans a set of systems over time,
+decides whether what it finds is *new*, *persistent*, *fixed* or *recurring*, and reports
+the change.
 
-Five target applications are stood up behind a controlled nginx host. Each can have
-reversible security drift switched on and off, and every switch is recorded in an
-authoritative ground-truth log. A later scanner is scored against that log, so the
-correct answer for every finding is known in advance.
+This repository holds two things:
 
-This repository contains the **test domain only** — the scanner/backend and the UI are
-separate deliverables.
+| | |
+|---|---|
+| **`backend/`** | the system — the scanning engine and its API |
+| **`frontend/`** | the dashboard that presents what the engine found |
+| **`lab/`** | a controlled test domain: five target applications whose security drift can be switched on and off, with an authoritative ground-truth log |
 
----
+The lab is what makes the system measurable. Every finding the engine produces is scored
+against a log of what was *actually* true at the moment of the scan, so detection
+accuracy and false-positive rate are measured rather than asserted.
 
 ## The three audited areas
 
 DriftGuard assesses exactly three areas, and nothing else. HTTP headers, CORS, cookies,
 HSTS and rate limiting are deliberately **out of scope**.
 
-| Area | Scenario | What the drift does |
-|---|---|---|
-| **TLS/SSL** | `tls-legacy` | the controlled host accepts TLS 1.0/1.1 |
-| | `cert-mismatch` | the served certificate does not match the hostname |
-| **Network/Service** | `http-plain` | the application is served over plain HTTP with no redirect |
-| | `port-open` | an unexpected legacy admin port is published |
-| **API exposure** | `api-debug` | an internal admin/debug endpoint becomes publicly reachable |
+| Area | What is assessed |
+|---|---|
+| **TLS/SSL** | accepted protocol versions and ciphers; certificate/hostname agreement |
+| **Network/Service** | which ports are published; whether the application is served in the clear |
+| **API exposure** | whether internal or administrative endpoints are publicly reachable |
 
-Every scenario is switchable in both directions and is verified by a live probe before
-it is recorded.
+## The lab
 
-## The five targets
+```bash
+cd lab
+./bootstrap.sh          # pull images → build the front-end bundles → start the domain → verify
+```
+
+Five targets stand behind a controlled nginx host, each with reversible drift:
 
 | Target | App | HTTPS | HTTP | Scenarios |
 |---|---|---|---|---|
-| `eservices-lab` | Flask portal (pre-existing lab) | 8443 | 8080 | all five (incl. `cert-mismatch`) |
+| `eservices-lab` | Flask portal | 8443 | 8080 | `tls-legacy`, `cert-mismatch`, `http-plain`, `port-open`, `api-debug` |
 | `democommerc` | FastAPI + React store | 8444 | 8082 | `tls-legacy`, `http-plain`, `api-debug` |
 | `civic-services-portal` | Flask API + React portal | 8445 | 8083 | `tls-legacy`, `port-open`, `api-debug` |
-| `juice-shop` | OWASP Juice Shop (unmodified image) | 8446 | 8085 | `tls-legacy`, `http-plain`, `api-debug` |
-| `vampi` | OWASP VAmPI (unmodified image) | 8447 | 8086 | `tls-legacy`, `port-open`, `api-debug` |
+| `juice-shop` | OWASP Juice Shop (unmodified) | 8446 | 8085 | `tls-legacy`, `http-plain`, `api-debug` |
+| `vampi` | OWASP VAmPI (unmodified) | 8447 | 8086 | `tls-legacy`, `port-open`, `api-debug` |
 
-Seventeen scenarios in total: five on `eservices-lab` and three on each other target.
-
-## Quick start
+Seventeen scenarios in total. Driving them:
 
 ```bash
-./bootstrap.sh          # pull images, build the front-end bundles, start the domain, verify it
-```
-
-`bootstrap.sh` is idempotent — re-run it any time to repair or refresh the environment.
-
-Then drive the drift:
-
-```bash
-python3 domain.py status                  # the five targets and their seventeen scenarios
-python3 domain.py on eservices-lab tls-legacy    # switch a scenario on
+python3 domain.py status                  # the targets and their scenarios
+python3 domain.py on eservices-lab tls-legacy    # switch a drift on
 python3 domain.py off eservices-lab tls-legacy   # and back off again
 python3 domain.py verify                  # probe every target against its recorded state
 python3 domain.py truth                   # the ground-truth classification matrix
+python3 sequence.py                       # the full nine-scan sequence
 ```
 
-To run the full nine-scan sequence that produces every classification state in every
-audit area:
+**[`lab/README.md`](lab/README.md)** is the lab's operator guide — addresses, scenarios,
+the nine-scan sequence, the ground-truth contract, and how to read `truth`.
+
+## The system
 
 ```bash
-python3 sequence.py
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn driftguard.main:app --host 127.0.0.1 --port 8000
 ```
 
-### Requirements
+The API is the system's interface. It exposes the target registry, the scans it has run,
+the evidence each scan produced, the drift classification between scans, and
+remediations. The dashboard in `frontend/` consumes it.
 
-- Linux with **Docker** and **Docker Compose v2**
-- **Python 3.12+** (standard library only — there is nothing to `pip install`)
-- **Node.js 18+** with npm, to build the two front-end bundles
+**Nothing is scanned that has not been explicitly authorized.** A target must be active,
+carry an `authorized` status and have an approved scope before the engine will assess
+it; the approved ports come from the lab's own registry, so a port the lab publishes only
+under a drift scenario is an *unapproved* port and is reported as one.
 
-### Tests
+### Tools
 
-The domain's own suite needs no dependencies at all:
+The engine drives established tools and turns their output into evidence:
 
-```bash
-python3 -m unittest discover -s tests -v
-```
+| Area | Tool | Detects |
+|---|---|---|
+| Network/Service | **nmap** | a published port outside the target's approved set |
+| TLS/SSL | **testssl.sh** | legacy protocol/cipher acceptance; certificate/hostname disagreement |
+| HTTP probing | **httpx** | the application served over plain HTTP with no redirect |
+| API exposure | **gobuster** *(optional, off by default)* | a sensitive path answering without authentication |
 
-The eServices target application has its own contract suite, which needs Flask. The host
-Python is PEP 668 "externally managed", so use a virtualenv (see
-[`eservices-lab/app/README.md`](eservices-lab/app/README.md)):
-
-```bash
-python3 -m venv /tmp/esvc-venv
-/tmp/esvc-venv/bin/pip install -r eservices-lab/app/requirements-dev.txt
-/tmp/esvc-venv/bin/python -m unittest discover -s eservices-lab/app/tests -v
-```
-
-## The CLI
-
-```
-python3 domain.py up [target] | down [target] | status [--json]
-python3 domain.py on <target> <scenario> | off <target> <scenario>
-python3 domain.py reset [target] | mark <label> | truth [--json] | verify [--json]
-```
-
-`on`/`off` wait until the target's live behaviour actually matches the request, so a
-`mark` taken straight afterwards records the truth. `verify` compares the live probes
-against the recorded state and exits non-zero on any disagreement.
-
-## The ground-truth contract
-
-- **Classification** — exactly six labels: `BASELINE`, `NEW`, `PERSISTENT`, `FIXED`,
-  `RECURRING`, `NO DRIFT`. The rules are frozen and do not change.
-- **`finding_key`** — `<target>/<area>/<scenario>`, where `<area>` is exactly one of
-  `TLS`, `Network`, `API`. The key is reconstructible from the row's own columns, so
-  the scanner's findings and the ground truth join on it without a mapping table.
-- **Ground-truth log** — `ground_truth.csv`, nine columns, one row per scenario per
-  scan.
-- **Down targets** — a target that is not running is recorded as `None` and excluded
-  from scoring. It is never silently counted as `NO DRIFT`.
+Gobuster is a content-discovery tool: it finds paths that were never planted, and an
+unplanted finding cannot be scored. It therefore runs only when explicitly enabled, and
+only findings that map to a planted weakness count towards the metrics — everything else
+it reports is informational.
 
 ## Safety
 
-- **Everything binds to `127.0.0.1`.** Never expose this lab to the internet. The
-  drift scenarios deliberately open a debug dump, an admin API and a legacy admin port.
+- **Everything binds to `127.0.0.1`.** The lab's drift scenarios deliberately open a
+  debug dump, an admin API and a legacy admin port. Never expose it to the internet.
 - **All data is fictional.** The seeded identifiers (`TEST-0001`, `CMTEST00000001`,
-  `+256700000001`, `10.20.0.0/24`, `lab-demo-key`, `*.eservices.test`) are the one
-  known set the later redaction check looks for. No real hostname, real IP or personal
-  data is seeded anywhere.
-- The Juice Shop and VAmPI images are used unmodified.
-
-## Repository layout
-
-```
-domain/              the controller package
-  model.py           frozen Target/Scenario types, the area labels, probe results
-  classify.py        the five-state classifier
-  state.py           scan + ground-truth storage, the nine-column schema
-  probes.py          the live network probes
-  render.py          nginx template substitution
-  certs.py           certificate generation
-  compose.py         docker compose wrappers
-  config.py          the target registry (single source of truth)
-  cli.py             the argparse CLI
-  targets/           one module per target
-domain.py            CLI entry point
-sequence.py          the unattended nine-scan sequence
-targets/             compose + nginx assets for the Juice Shop and VAmPI hosts
-tests/               the unittest suite
-docs/domain.md       the operator guide — read this next
-docs/development-log.md  how the domain was built, and the decisions taken
-```
+  `+256700000001`, `10.20.0.0/24`, `lab-demo-key`, `*.eservices.test`) are one known set
+  that the redaction zero-leakage check looks for. No real hostname, real IP address,
+  credential or personal data appears anywhere.
 
 ## Documentation
 
-- **[`docs/domain.md`](docs/domain.md)** — the operator guide: addresses, scenarios,
-  bringing the domain up and down, the nine-scan sequence, reading the ground truth.
-- **[`docs/development-log.md`](docs/development-log.md)** — the build log: the
-  rulings taken, the defects found by running the domain live, and how they were fixed.
+| | |
+|---|---|
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | the approved design — the classification rules, the scan sequence, the API contract, the fictional-data conventions |
+| [`docs/superpowers/plans/`](docs/superpowers/plans/) | the implementation plan, task by task |
+| [`docs/development-log.md`](docs/development-log.md) | how it was built: the rulings taken, the defects that only live runs surfaced, and how each was fixed |
+| [`lab/docs/domain.md`](lab/docs/domain.md) | the lab's operator guide |
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). The Juice Shop and VAmPI images are third-party artefacts
+used unmodified and are not covered by it.
