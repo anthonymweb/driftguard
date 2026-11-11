@@ -1,0 +1,258 @@
+* Connecting to '127.0.0.1'
+* Connected to '127.0.0.1' on port 8443
+* SSL established using 'TLSv1.3' / 'TLS_AES_256_GCM_SHA384'
+* Selected ALPN protocol: 'http/1.1'
+GET / HTTP/1.1
+Host: 127.0.0.1:8443
+Accept: */*
+Accept-Encoding: gzip, deflate, zstd
+Connection: keep-alive
+User-Agent: python-httpx/0.28.1
+
+HTTP/1.1 200 OK
+Server: nginx/1.27.5
+Date: Wed, 11 Nov 2026 09:29:02 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 8253
+Connection: keep-alive
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home — eServices Demo Commonwealth</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <div class="demo-ribbon" role="note">
+    <strong>DEMONSTRATION SITE — fictional data only.</strong>
+    This portal uses sample records and does not provide real government 
+services.
+  </div>
+  <div class="utility-bar">
+    <div class="utility-inner">
+      <span>Demo Commonwealth &middot; Citizen Services</span>
+      <span><a href="/help">Help</a> &middot; <a href="/notices">Service 
+notices</a></span>
+    </div>
+  </div>
+  <header class="site-header">
+    <div class="brand-bar">
+      <a class="brand" href="/">
+        <span class="crest" aria-hidden="true">eS</span>
+        <span class="wordmark">
+          <span class="title">eServices</span>
+          <span class="sub">Demo Commonwealth</span>
+        </span>
+      </a>
+      <p class="tag">A simulated citizen services portal</p>
+    </div>
+    <nav class="primary-nav" aria-label="Primary">
+      <div class="nav-inner">
+        <a href="/" aria-current="page">Home</a>
+        <a href="/#catalogue" >Services</a>
+        <a href="/records" >Records lookup</a>
+        <a href="/applications" >Applications</a>
+        <a href="/notices" >Notices</a>
+        <a href="/help" >Help centre</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <div class="wrap">
+      
+<section class="hero" aria-labelledby="hero-title">
+  <h1 id="hero-title">Access citizen services online</h1>
+  <p>Find information, check sample records, and submit demonstration requests 
+across Registry, Pensions, Licensing, Revenue, Employment, and Land &amp; 
+Housing.</p>
+  <form class="search-row" role="search" action="#catalogue" method="get">
+    <label for="service-search" class="sr-only">Search services</label>
+    <input id="service-search" name="q" type="search" placeholder="Search for a 
+service (e.g. pension, licence, records)">
+    <button class="btn" type="submit">Search services</button>
+  </form>
+</section>
+
+<div class="grid two">
+  <div>
+    <section id="catalogue" aria-labelledby="catalogue-title">
+      <div class="section-title">
+        <h2 id="catalogue-title">Service catalogue</h2>
+        <span class="muted">Grouped by department</span>
+      </div>
+      
+      <div class="service-group">
+        <h3>Registry (simulated)</h3>
+        <ul class="service-list">
+          
+          <li class="service-item">
+            <a href="/services/SVC-01">SVC-01 — Citizen Records Lookup</a>
+            <span class="badge">Records</span>
+            <p>Request a copy or status check of a civil registration 
+record.</p>
+          </li>
+          
+          <li class="service-item">
+            <a href="/services/SVC-04">SVC-04 — Birth Certificate Extract</a>
+            <span class="badge">Records</span>
+            <p>Request an extract from a registered birth record.</p>
+          </li>
+          
+        </ul>
+      </div>
+      
+      <div class="service-group">
+        <h3>Pensions (simulated)</h3>
+        <ul class="service-list">
+          
+          <li class="service-item">
+            <a href="/services/SVC-02">SVC-02 — Pension Benefit Status</a>
+            <span class="badge">Benefits</span>
+            <p>Check the current status of a pension benefit record.</p>
+          </li>
+          
+        </ul>
+      </div>
+      
+      <div class="service-group">
+        <h3>Licensing (simulated)</h3>
+        <ul class="service-list">
+          
+          <li class="service-item">
+            <a href="/services/SVC-03">SVC-03 — Business Licence Check</a>
+            <span class="badge">Licensing</span>
+            <p>Verify whether a sample business licence is active or due for 
+renewal.</p>
+          </li>
+          
+          <li class="service-item">
+            <a href="/services/SVC-08">SVC-08 — Professional Licence Renewal</a>
+            <span class="badge">Licensing</span>
+            <p>Submit a renewal request for a sample professional licence.</p>
+          </li>
+          
+        </ul>
+      </div>
+      
+      <div class="service-group">
+        <h3>Revenue (simulated)</h3>
+        <ul class="service-list">
+          
+          <li class="service-item">
+            <a href="/services/SVC-05">SVC-05 — Property Tax Certificate</a>
+            <span class="badge">Certificates</span>
+            <p>Obtain a statement of property tax standing for a sample 
+parcel.</p>
+          </li>
+          
+        </ul>
+      </div>
+      
+      <div class="service-group">
+        <h3>Employment (simulated)</h3>
+        <ul class="service-list">
+          
+          <li class="service-item">
+            <a href="/services/SVC-06">SVC-06 — Work Permit Status</a>
+            <span class="badge">Permits</span>
+            <p>Check processing status for a sample work permit application.</p>
+          </li>
+          
+        </ul>
+      </div>
+      
+      <div class="service-group">
+        <h3>Land &amp; Housing (simulated)</h3>
+        <ul class="service-list">
+          
+          <li class="service-item">
+            <a href="/services/SVC-07">SVC-07 — Land Title Search</a>
+            <span class="badge">Land</span>
+            <p>Search the demonstration land register for a parcel title 
+summary.</p>
+          </li>
+          
+          <li class="service-item">
+            <a href="/services/SVC-09">SVC-09 — Housing Assistance Enquiry</a>
+            <span class="badge">Housing</span>
+            <p>Register interest in a sample housing assistance programme.</p>
+          </li>
+          
+        </ul>
+      </div>
+      
+    </section>
+  </div>
+
+  <aside aria-label="Highlights">
+    <section class="card" aria-labelledby="popular-title">
+      <div class="section-title">
+        <h2 id="popular-title">Popular services</h2>
+      </div>
+      <ul class="popular-strip">
+        
+        <li><a href="/services/SVC-01">Citizen Records Lookup</a></li>
+        
+        <li><a href="/services/SVC-02">Pension Benefit Status</a></li>
+        
+        <li><a href="/services/SVC-03">Business Licence Check</a></li>
+        
+        <li><a href="/services/SVC-04">Birth Certificate Extract</a></li>
+        
+      </ul>
+    </section>
+
+    <section class="card" aria-labelledby="notices-title" 
+style="margin-top:18px;">
+      <div class="section-title">
+        <h2 id="notices-title">Notices</h2>
+        <a href="/notices">View all</a>
+      </div>
+      
+      <article class="notice">
+        <time datetime="2026-10-20">2026-10-20</time>
+        <h3>Scheduled maintenance window</h3>
+        <p class="muted" style="margin:0;">The demonstration portal will be 
+unavailable for routine maintenance on 2026-10-25 between 01:00 and 03:00 (demo 
+time).</p>
+      </article>
+      
+      <article class="notice">
+        <time datetime="2026-10-14">2026-10-14</time>
+        <h3>New online licence renewal form</h3>
+        <p class="muted" style="margin:0;">A sample renewal workflow is now 
+available for selected professional licences in this demo portal.</p>
+      </article>
+      
+      <article class="notice">
+        <time datetime="2026-10-08">2026-10-08</time>
+        <h3>Updated record lookup guidance</h3>
+        <p class="muted" style="margin:0;">Guidance for using the citizen 
+records lookup service has been refreshed with clearer steps.</p>
+      </article>
+      
+    </section>
+  </aside>
+</div>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div><strong>eServices — Demo Commonwealth</strong></div>
+      <div class="footer-meta">This is a demonstration site. All names, 
+identifiers, addresses and references are fictional and for testing only.</div>
+      <div class="footer-meta">Departments: Registry &middot; Pensions &middot; 
+Licensing &middot; Revenue &middot; Employment &middot; Land &amp; Housing</div>
+      <div class="footer-meta">&copy; 2026 Demo Commonwealth (fictional). <a 
+href="/help">Help centre</a></div>
+    </div>
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.94SVN scan initiated Wed Nov 11 12:27:30 2026 as: nmap -sV -Pn -p 8443 -oX - 127.0.0.1 -->
+<nmaprun scanner="nmap" args="nmap -sV -Pn -p 8443 -oX - 127.0.0.1" start="1794389250" startstr="Wed Nov 11 12:27:30 2026" version="7.94SVN" xmloutputversion="1.05">
+<scaninfo type="connect" protocol="tcp" numservices="1" services="8443"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1794389252" endtime="1794389265"><status state="up" reason="user-set" reason_ttl="0"/>
+<address addr="127.0.0.1" addrtype="ipv4"/>
+<hostnames>
+<hostname name="localhost" type="PTR"/>
+</hostnames>
+<ports><port protocol="tcp" portid="8443"><state state="open" reason="syn-ack" reason_ttl="0"/><service name="http" product="nginx" version="1.27.5" tunnel="ssl" method="probed" conf="10"><cpe>cpe:/a:igor_sysoev:nginx:1.27.5</cpe></service></port>
+</ports>
+<times srtt="1327" rttvar="5000" to="100000"/>
+</host>
+<runstats><finished time="1794389265" timestr="Wed Nov 11 12:27:45 2026" summary="Nmap done at Wed Nov 11 12:27:45 2026; 1 IP address (1 host up) scanned in 14.86 seconds" elapsed="14.86" exit="success"/><hosts up="1" down="0" total="1"/>
+</runstats>
+</nmaprun>
