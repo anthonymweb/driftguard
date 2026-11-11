@@ -1,0 +1,15 @@
+# Test dependencies for the eServices target application.
+#
+# The application itself needs only Flask, which the container image installs.
+# These are the same dependency, pinned to the range the image resolves to, so
+# the test suite can be run on a host.
+#
+#   python3 -m venv /tmp/esvc-venv
+#   /tmp/esvc-venv/bin/pip install -r eservices-lab/app/requirements-dev.txt
+#   /tmp/esvc-venv/bin/python -m unittest discover -s eservices-lab/app/tests -v
+#
+# (PEP 668 marks the system Python as externally managed, so a virtualenv is
+# the supported way to install it. Alternatively, run the tests inside the
+# container:  docker compose -f eservices-lab/docker-compose.yml run --rm portal
+# would need the test files copied in — use the virtualenv.)
+flask>=3.0,<4

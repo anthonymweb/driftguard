@@ -139,6 +139,16 @@ class PortalTests(unittest.TestCase):
         self.assertIn("reference", data)
         self.assertTrue(data["reference"].startswith("ESB-2026-"))
 
+    def test_post_application_rejects_an_unknown_service(self):
+        # an unknown service must not silently become the first one
+        r = self.client.post("/api/v1/applications", json={"service_id": "SVC-999", "applicant": "Test Applicant"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("error", r.get_json())
+
+    def test_post_application_rejects_an_empty_applicant(self):
+        r = self.client.post("/api/v1/applications", json={"service_id": "SVC-01", "applicant": "   "})
+        self.assertEqual(r.status_code, 400)
+
     def test_additive_api_routes(self):
         r = self.client.get("/api/v1/services/SVC-01")
         self.assertEqual(r.status_code, 200)

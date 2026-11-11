@@ -138,13 +138,19 @@ def create_application():
     data = request.get_json(silent=True) or {}
     service_id = data.get("service_id", "SVC-01")
     applicant = data.get("applicant", "Sample Applicant")
-    svc = demo_data.get_service(service_id) or demo_data.SERVICES[0]
+    svc = demo_data.get_service(service_id)
+    if svc is None:
+        # An unknown service must not silently become the first one: a client
+        # asking for a service that does not exist gets a clear error.
+        return jsonify({"error": "unknown service", "service_id": service_id}), 400
+    if not isinstance(applicant, str) or not applicant.strip():
+        return jsonify({"error": "applicant must be a non-empty string"}), 400
     ref = demo_data.next_application_ref()
     item = {
         "reference": ref,
         "service_id": svc["id"],
         "service_name": svc["name"],
-        "applicant": applicant,
+        "applicant": applicant.strip(),
         "status": "Received",
         "submitted": "2026-11-11",
         "district": "Central District",

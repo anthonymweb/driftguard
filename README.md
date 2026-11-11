@@ -71,6 +71,24 @@ python3 sequence.py
 - **Python 3.12+** (standard library only — there is nothing to `pip install`)
 - **Node.js 18+** with npm, to build the two front-end bundles
 
+### Tests
+
+The domain's own suite needs no dependencies at all:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+The eServices target application has its own contract suite, which needs Flask. The host
+Python is PEP 668 "externally managed", so use a virtualenv (see
+[`eservices-lab/app/README.md`](eservices-lab/app/README.md)):
+
+```bash
+python3 -m venv /tmp/esvc-venv
+/tmp/esvc-venv/bin/pip install -r eservices-lab/app/requirements-dev.txt
+/tmp/esvc-venv/bin/python -m unittest discover -s eservices-lab/app/tests -v
+```
+
 ## The CLI
 
 ```
