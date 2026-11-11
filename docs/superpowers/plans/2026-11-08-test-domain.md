@@ -1001,3 +1001,128 @@ contract the measurement depends on** (see the amended Global Constraints above)
 ```bash
 git add -A && git commit -m "feat(eservices-lab): realistic portal frontend and demo data"
 ```
+
+---
+
+## Phase 3 — the DriftGuard scanning engine
+
+The lab (now `lab/`) exists so the engine can be **measured**. These tasks build the
+engine that does the scanning, and the harness that scores it.
+
+**Frozen contracts (unchanged):** the classification labels; `finding_key` =
+`<target>/<area>/<scenario>` with area ∈ {`TLS`, `Network`, `API`}; the three audited
+areas and nothing else; the API contract in spec §6.6.
+
+**Tools (decided):** `nmap` (network), `testssl.sh` (TLS), `httpx` (HTTP probing),
+`gobuster` (API exposure) **optional and off by default**. Gobuster finds paths that
+were never planted, and an unplanted finding cannot be scored, so only findings that
+map to a planted weakness count towards the metrics — everything else it reports is
+informational. `nikto` and `nuclei` are deliberately **not** used: their findings are
+mostly outside the three audited areas and would be indistinguishable from false
+positives in the metrics.
+
+**Safety — authorisation, not locality.** The engine assesses **any explicitly
+authorised target**: a public domain, a real API, a host, or the loopback lab. The lab's
+"bind to 127.0.0.1" rule is a rule about the *lab's vulnerable targets*, not about the
+scanner: a drift-detection tool that could only assess 127.0.0.1 would be a toy, and the
+real system must assess real systems.
+
+What makes that defensible is not the address but the **authorisation and the scope**:
+
+1. **Explicit, attributable authorisation.** A target is assessed only when it is
+   registered, `active`, `authorized`, and carries an approved scope — and the
+   authorisation must record *who* authorised it, *when*, and *on what basis*. An
+   authorisation without an audit trail is not an authorisation.
+2. **Scope-limited assessment.** The engine scans **only the target's approved ports**
+   and paths. It never sweeps a wide port range, never discovers ports the target did
+   not approve, and never brute-forces a directory unless that module is enabled for
+   that specific target.
+3. **Politeness.** Rate-limited, with bounded timeouts, so an authorised third-party
+   system is not hammered.
+4. **Redaction before anything leaves the machine.** Evidence from a real target carries
+   real hostnames, addresses and identifiers; the redaction layer tokenises them before
+   any of it can reach an AI call, and the token map never leaves the local environment.
+
+The lab is simply the first authorised target: local, deterministic, and planted with a
+known ground truth, which is what makes the engine measurable.
+
+## Task 15: Tool adapters
+
+**Files:**
+- Create: `backend/driftguard/scanner/__init__.py`, `backend/driftguard/scanner/tools.py`
+- Create: `backend/tests/test_scanner_tools.py`
+
+**Interfaces:**
+- Produces: `run_nmap(host, ports) -> dict`, `run_testssl(host, port) -> dict`,
+  `run_httpx(url) -> dict`, `run_gobuster(url, wordlist) -> dict` — each invokes one
+  tool and returns **normalised observations**, never raw output.
+
+**Contract:** every invocation is a subprocess with an explicit argument list (never a
+shell string), a bounded timeout, and a non-zero exit is reported as an error rather
+than silently producing empty observations. The normalised shapes are fixed:
+`run_nmap` → `{"open_ports": [{"port": int, "state": str, "service": str, "version": str}]}`;
+`run_testssl` → `{"protocols": {name: bool}, "cipher_issues": [str], "cert": {...}}`;
+`run_httpx` → `{"status_code": int, "scheme": str, "location": str | None, "final_url": str}`;
+`run_gobuster` → `{"found": [{"path": str, "status": int, "size": int}]}`.
+
+Tests parse **recorded tool output** — no tool is executed in a unit test.
+
+## Task 16: The check catalogue
+
+**Files:** `backend/driftguard/scanner/checks.py`, `backend/tests/test_scanner_checks.py`
+
+Each check has an id that **is** the planted scenario name (`tls-legacy`,
+`cert-mismatch`, `port-open`, `http-plain`, `api-debug`), an area, a severity and a
+title. A check consumes the normalised observations and yields zero or more evidence
+items whose fingerprint is exactly `<target>/<area>/<check-id>` — the frozen key, so the
+evaluation joins without a mapping table.
+
+## Task 17: The engine and the scan endpoint
+
+**Files:** `backend/driftguard/scanner/engine.py`, `backend/driftguard/main.py`,
+`backend/driftguard/models.py`, `backend/driftguard/schemas.py`,
+`backend/tests/test_scanner_engine.py`
+
+The scan endpoint stops recording a request and **runs the assessment**: gather
+observations for the target's approved scope, run the catalogue, store the evidence,
+classify the drift against the previous scan, and store the drift events.
+
+**Authorisation is attributable.** `Target` gains the record of *who* authorised the
+assessment, *when*, and *on what basis* (a reference to the authorisation the assessor
+holds). A scan of a target without that record is refused, and so is a scan of a target
+that is not `active`, not `authorized`, or has no approved scope.
+
+**Scope is enforced, not assumed.** The engine is given the target's `approved_ports`
+and scans only those; it never sweeps a range, and the optional discovery module is
+enabled per target, never globally. The engine also rate-limits itself and uses bounded
+timeouts, so an authorised third-party system is treated politely.
+
+## Task 18: Registry sync and the evaluation harness
+
+**Files:** `backend/driftguard/sync.py`, `backend/evaluate.py`, `backend/tests/test_sync.py`,
+`backend/tests/test_evaluate.py`
+
+The sync reads the lab's registry through the lab's **CLI** (`lab/domain.py status
+--json`) and registers each target with its approved ports and scope. The evaluation
+joins the engine's findings to the lab's ground truth on `finding_key` and reports
+detection accuracy and false-positive rate per target and per area.
+
+## Task 19: The redaction layer
+
+**Files:** `backend/driftguard/redaction.py`, `backend/tests/test_redaction.py`
+
+Evidence from a real target carries real hostnames, addresses, identifiers and personal
+data. Before any of it can reach an AI call it must be tokenised, and the token map
+must never leave the local environment.
+
+**Contract:** `redact(payload: dict) -> tuple[dict, dict]` returns the tokenised
+payload and the token map. The map maps each distinct sensitive value to a stable
+placeholder (`HOST_a91f`, `IP_3c07`, …) so the same value is recognisable across
+scans without being readable, and the map is written only to the local database — it is
+never included in an API response, never logged, and never sent anywhere.
+
+**The zero-leakage check.** The lab's fictional identifiers are the known set the check
+looks for: `TEST-0001`, `CMTEST00000001`, `+256700000001`, `10.20.0.0/24`,
+`lab-demo-key`, `*.eservices.test`. A test asserts that after redaction, none of them
+survives in the tokenised payload — that is, the seeded personal-looking data never
+reaches an AI call, even in a controlled lab.
