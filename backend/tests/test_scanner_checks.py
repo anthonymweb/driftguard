@@ -88,6 +88,24 @@ class CertMismatchTests(unittest.TestCase):
     def test_no_finding_when_observation_missing(self):
         self.assertEqual(cert_mismatch.run({}, ctx()), [])
 
+    def test_unrelated_certificate_field_containing_the_hostname_does_not_match(self):
+        # Only the CN and the SANs name the host. A certificate that merely
+        # mentions the hostname in some other field has not matched it.
+        obs = {"testssl": {"cert": {
+            "cert_commonName": "wrong.example",
+            "cert_subjectAltName": "DNS:wrong.example",
+            "cert_issuer": "CN=eservices-lab, O=Unrelated Field",
+        }}}
+        items = cert_mismatch.run(obs, ctx(hostname="eservices-lab"))
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["fingerprint"], "eservices-lab/TLS/cert-mismatch")
+
+    def test_wildcard_certificate_matches_a_single_label_subdomain(self):
+        obs = {"testssl": {"cert": {"cert_subjectAltName": "DNS:*.example.test"}}}
+        self.assertEqual(cert_mismatch.run(obs, ctx(hostname="www.example.test")), [])
+        # a wildcard covers one label only, not a deeper name
+        self.assertEqual(len(cert_mismatch.run(obs, ctx(hostname="a.b.example.test"))), 1)
+
 
 class PortOpenTests(unittest.TestCase):
     def test_reports_unapproved_open_port(self):
@@ -163,6 +181,12 @@ class ApiDebugTests(unittest.TestCase):
 
     def test_no_finding_for_404_path(self):
         obs = {"gobuster": {"found": [{"path": "/api/v1/admin/debug", "status": 404, "size": 0}]}}
+        self.assertEqual(api_debug.run(obs, ctx()), [])
+
+    def test_no_finding_for_a_redirect_to_a_sign_in_page(self):
+        # A 3xx discloses nothing: it is the server sending the visitor
+        # somewhere else (a sign-in page), not the sensitive content.
+        obs = {"gobuster": {"found": [{"path": "/admin", "status": 302, "size": 0}]}}
         self.assertEqual(api_debug.run(obs, ctx()), [])
 
     def test_no_finding_for_auth_required(self):

@@ -8,6 +8,7 @@ the engine can iterate them without knowing what they detect.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -77,18 +78,60 @@ def _run_tls_legacy(observations: Observation, context: Context) -> list[Evidenc
     ]
 
 
+#: Certificate fields that name the host: the common name and the subject
+#: alternative names. Other fields (issuers, policies, chain of trust) must not
+#: be searched for the hostname.
+_CERT_NAME_KEYS = ("cert_commonName", "cert_commonName_wo_SNI")
+_CERT_SAN_KEYS = ("cert_subjectAltName", "cert_san", "cert_subjectAlternativeName")
+
+
+def _cert_names(cert: dict[str, Any]) -> set[str]:
+    """The host names the certificate claims, from its CN and its SANs."""
+    names: set[str] = set()
+    for key in _CERT_NAME_KEYS:
+        value = cert.get(key)
+        if value:
+            names.add(str(value).strip().lower())
+    for key in _CERT_SAN_KEYS:
+        value = cert.get(key)
+        if value:
+            for part in re.split(r"[,\s]+", str(value)):
+                part = part.strip()
+                if not part:
+                    continue
+                # testssl writes SANs as "DNS:host" / "IP Address:1.2.3.4" in
+                # some sections and as bare hosts in others.
+                part = re.sub(r"^(?i:dns|ip address|ip|email|uri):", "", part)
+                if part:
+                    names.add(part.strip().lower())
+    return names
+
+
+def _host_matches(hostname: str, name: str) -> bool:
+    """Does *hostname* match the certificate name *name*?
+
+    Exact match, or a single-label wildcard (``*.example.test`` matches
+    ``www.example.test`` but not ``a.b.example.test``). A plain substring
+    test would call a certificate valid whenever the hostname happened to
+    appear inside some unrelated field.
+    """
+    host = (hostname or "").strip().lower().rstrip(".")
+    candidate = (name or "").strip().lower().rstrip(".")
+    if not host or not candidate:
+        return False
+    if host == candidate:
+        return True
+    if candidate.startswith("*."):
+        suffix = candidate[1:]  # ".example.test"
+        return host.endswith(suffix) and host.count(".") == suffix.count(".")
+    return False
+
+
 def _cert_matches(hostname: str, cert: dict[str, Any]) -> bool:
     host = (hostname or "").strip().lower()
     if not host or not cert:
         return False
-    for key, value in cert.items():
-        if value is None:
-            continue
-        text = str(value).lower()
-        # direct match or present as SAN/CN token
-        if host in text:
-            return True
-    return False
+    return any(_host_matches(host, name) for name in _cert_names(cert))
 
 
 def _run_cert_mismatch(observations: Observation, context: Context) -> list[EvidenceItem]:
@@ -168,13 +211,19 @@ def _run_http_plain(observations: Observation, context: Context) -> list[Evidenc
 
 
 def _is_exposed_status(status: Any) -> bool:
+    """Is this status code an *exposure*?
+
+    A path that answers with the content is exposed. A redirect (3xx) to a
+    sign-in page is not: nothing was disclosed. An authentication or
+    not-found answer is not either.
+    """
     try:
         code = int(status)
     except (TypeError, ValueError):
         return False
     if code in (401, 403, 404):
         return False
-    return 200 <= code < 400
+    return 200 <= code < 300
 
 
 def _run_api_debug(observations: Observation, context: Context) -> list[EvidenceItem]:
