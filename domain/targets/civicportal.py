@@ -16,6 +16,7 @@ TEMPLATE_PATH: Path = ROOT / "civic-services-portal" / "deploy" / "nginx" / "sit
 CONFIG_PATH: Path = ROOT / "civic-services-portal" / "deploy" / "nginx" / "conf.d" / "default.conf"
 STATE_PATH: Path = ROOT / "civic-services-portal" / "deploy" / "state.json"
 CERT_DIR: Path = ROOT / "certs"
+DRIFT_PORT = 8084
 
 TARGET = Target(
     name=NAME,
@@ -85,12 +86,22 @@ def nginx_config(state: dict[str, bool]) -> str:
 def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     _write_config(nginx_config(current))
     compose.validate_nginx_config(COMPOSE_FILE)
-    prev_port = bool(previous.get("port-open"))
-    curr_port = bool(current.get("port-open"))
-    if prev_port != curr_port:
-        compose.recreate(COMPOSE_FILE, OVERRIDE_PATH if curr_port else None)
+    # The published-port state is converged *absolutely* rather than by diffing
+    # against `previous`: the recorded state can disagree with reality (a
+    # recreate that did not take effect, or an external `docker compose` run),
+    # and a diff could never repair that. Recreating is idempotent, so this is
+    # safe to do every time.
+    if current.get("port-open"):
+        compose.recreate(COMPOSE_FILE, OVERRIDE_PATH)
+    elif _drift_port_published():
+        compose.recreate(COMPOSE_FILE, None)
     compose.reload_nginx(COMPOSE_FILE)
     state.write_state(STATE_PATH, current)
+
+
+def _drift_port_published() -> bool:
+    """Is the drift port actually published right now?"""
+    return probe_port_open("127.0.0.1", DRIFT_PORT) == "present"
 
 
 def up() -> None:
@@ -107,6 +118,6 @@ def probes() -> dict[str, Callable[[], ProbeResult]]:
     host = "127.0.0.1"
     return {
         "tls-legacy": lambda: probe_tls_legacy(host, 8445),
-        "port-open": lambda: probe_port_open(host, 8084),
+        "port-open": lambda: probe_port_open(host, DRIFT_PORT),
         "api-debug": lambda: probe_api_path(host, 8445, "/api/v1/admin/debug", tls=True),
     }

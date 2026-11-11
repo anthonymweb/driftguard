@@ -69,7 +69,8 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
     @patch("domain.targets.vampi._init_db")
-    def test_apply_writes_config_and_reloads(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._drift_port_published", return_value=False)
+    def test_apply_writes_config_and_reloads(self, mock_published, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         state = {s: False for s in NAMES}
         module.apply(state, state)
         mock_write.assert_called_once()
@@ -82,7 +83,8 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
     @patch("domain.targets.vampi._init_db")
-    def test_apply_enables_port_open_uses_override(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._drift_port_published", return_value=False)
+    def test_apply_enables_port_open_uses_override(self, mock_published, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         previous = {s: False for s in NAMES}
         current = {**previous, "port-open": True}
         module.apply(previous, current)
@@ -94,12 +96,28 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
     @patch("domain.targets.vampi._init_db")
-    def test_apply_disables_port_open_recreates_without_override(self, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
+    @patch("domain.targets.vampi._drift_port_published", return_value=True)
+    def test_apply_disables_port_open_recreates_without_override(self, mock_published, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
         previous = {**{s: False for s in NAMES}, "port-open": True}
         current = {s: False for s in NAMES}
         module.apply(previous, current)
         mock_recreate.assert_called_once_with(module.COMPOSE_FILE, None)
         mock_reload.assert_called_once_with(module.COMPOSE_FILE)
+
+    @patch("domain.targets.vampi.compose.validate_nginx_config")
+    @patch("domain.targets.vampi.compose.reload_nginx")
+    @patch("domain.targets.vampi._write_config")
+    @patch("domain.targets.vampi.compose.recreate")
+    @patch("domain.targets.vampi._init_db")
+    @patch("domain.targets.vampi._drift_port_published", return_value=True)
+    def test_apply_withdraws_the_port_when_the_recorded_state_disagrees_with_reality(
+            self, mock_published, mock_init, mock_recreate, mock_write, mock_reload, mock_validate):
+        # The recorded state says the port is closed but the port is still
+        # published: the apply must repair that, not trust the record.
+        previous = {s: False for s in NAMES}
+        current = {s: False for s in NAMES}
+        module.apply(previous, current)
+        mock_recreate.assert_called_once_with(module.COMPOSE_FILE, None)
 
     @patch("domain.targets.vampi.compose.validate_nginx_config")
     @patch("domain.targets.vampi.compose.reload_nginx")
@@ -171,8 +189,9 @@ class VampiApplyTests(unittest.TestCase):
     @patch("domain.targets.vampi.compose.reload_nginx")
     @patch("domain.targets.vampi._write_config")
     @patch("domain.targets.vampi.compose.recreate")
+    @patch("domain.targets.vampi._drift_port_published", return_value=False)
     def test_apply_does_not_reinitialise_db_when_port_open_unchanged(
-        self, mock_recreate, mock_write, mock_reload, mock_validate, mock_init
+        self, mock_published, mock_recreate, mock_write, mock_reload, mock_validate, mock_init
     ):
         previous = {**{s: False for s in NAMES}, "api-debug": True}
         current = {**{s: False for s in NAMES}, "api-debug": False}

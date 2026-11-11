@@ -135,12 +135,16 @@ def _state_mismatches(target, intended_state: dict[str, bool], probes: dict) -> 
 
 
 def _wait_for_state(target_name: str, mod, intended_state: dict[str, bool],
-                    timeout: float = 60.0, poll_interval: float = 0.25) -> int:
+                    timeout: float = 60.0, poll_interval: float = 0.25,
+                    quiet: bool = False) -> int:
     """Wait until the target's live behaviour matches *intended_state*.
 
     ``timeout`` defaults to 60 s because a scenario that republishes a port
     recreates the target's containers: on this machine that recreation takes
     ~12 s, and 30 s proved flaky when it followed another recreation.
+
+    ``quiet`` suppresses the timeout message, so a caller that intends to retry
+    reports the failure only once, after its last attempt.
     """
     target = TARGETS[target_name]
     if _is_down(target):
@@ -162,10 +166,31 @@ def _wait_for_state(target_name: str, mod, intended_state: dict[str, bool],
         f"{name}: observed {info['observed']} expected {info['expected']}"
         for name, info in sorted((last_mismatches or {}).items())
     )
-    print(
-        f"{target_name}: live state did not settle within {timeout:.1f}s ({details})",
-        file=sys.stderr,
-    )
+    if not quiet:
+        print(
+            f"{target_name}: live state did not settle within {timeout:.1f}s ({details})",
+            file=sys.stderr,
+        )
+    return 1
+
+
+def _apply_and_wait(target_name: str, mod, previous: dict[str, bool],
+                    current: dict[str, bool], attempts: int = 2) -> int:
+    """Apply *current* and wait for the target to actually live it.
+
+    The apply is re-issued when the live state does not settle. A container
+    recreation or an nginx reload can occasionally be overtaken by another
+    compose operation, leaving the target serving its previous configuration;
+    re-applying converges it, and the target modules' apply is idempotent.
+    """
+    for attempt in range(1, attempts + 1):
+        mod.apply(previous, current)
+        if _wait_for_state(target_name, mod, current,
+                           quiet=attempt < attempts) == 0:
+            return 0
+        if attempt < attempts:
+            print(f"{target_name}: live state did not settle, re-applying",
+                  file=sys.stderr)
     return 1
 
 
@@ -253,8 +278,7 @@ def _cmd_toggle(args, enable: bool) -> int:
     previous = mod.read_state()
     current = dict(previous)
     current[args.scenario] = enable
-    mod.apply(previous, current)
-    return _wait_for_state(args.target, mod, current)
+    return _apply_and_wait(args.target, mod, previous, current)
 
 
 def _cmd_reset(args) -> int:
@@ -266,8 +290,7 @@ def _cmd_reset(args) -> int:
         mod = MODULES[name]
         previous = mod.read_state()
         current = {s.name: False for s in target.scenarios}
-        mod.apply(previous, current)
-        rc = _wait_for_state(name, mod, current)
+        rc = _apply_and_wait(name, mod, previous, current)
         if rc:
             return rc
     return 0

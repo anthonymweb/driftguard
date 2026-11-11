@@ -20,6 +20,7 @@ TEMPLATE_PATH: Path = ROOT / "targets" / "vampi" / "nginx" / "site.conf.tpl"
 CONFIG_PATH: Path = ROOT / "targets" / "vampi" / "nginx" / "conf.d" / "default.conf"
 STATE_PATH: Path = ROOT / "targets" / "vampi" / "state.json"
 CERT_DIR: Path = ROOT / "certs"
+DRIFT_PORT = 8087
 
 TARGET = Target(
     name=NAME,
@@ -100,15 +101,28 @@ def nginx_config(state_map: dict[str, bool]) -> str:
 def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     _write_config(nginx_config(current))
     compose.validate_nginx_config(COMPOSE_FILE)
-    prev_port = bool(previous.get("port-open"))
-    curr_port = bool(current.get("port-open"))
-    recreated = prev_port != curr_port
-    if recreated:
-        compose.recreate(COMPOSE_FILE, OVERRIDE_PATH if curr_port else None)
+    # The published-port state is converged *absolutely* rather than by diffing
+    # against `previous`: the recorded state can disagree with reality (a
+    # recreate that did not take effect, or an external `docker compose` run),
+    # and a diff could never repair that. Recreating is idempotent, so this is
+    # safe to do every time.
+    recreated = False
+    if current.get("port-open"):
+        compose.recreate(COMPOSE_FILE, OVERRIDE_PATH)
+        recreated = True
+    elif _drift_port_published():
+        compose.recreate(COMPOSE_FILE, None)
+        recreated = True
     compose.reload_nginx(COMPOSE_FILE)
     if recreated:
+        # The database lives inside the container, so a recreate destroys it.
         _init_db()
     state.write_state(STATE_PATH, current)
+
+
+def _drift_port_published() -> bool:
+    """Is the drift port actually published right now?"""
+    return probe_port_open("127.0.0.1", DRIFT_PORT) == "present"
 
 
 def _ssl_context() -> ssl.SSLContext:
@@ -179,6 +193,6 @@ def probes() -> dict[str, Callable[[], ProbeResult]]:
     host = "127.0.0.1"
     return {
         "tls-legacy": lambda: probe_tls_legacy(host, 8447),
-        "port-open": lambda: probe_port_open(host, 8087),
+        "port-open": lambda: probe_port_open(host, DRIFT_PORT),
         "api-debug": lambda: probe_api_path(host, 8447, "/users/v1/_debug", tls=True),
     }

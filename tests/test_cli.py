@@ -235,6 +235,33 @@ class CliWaitForStateTests(unittest.TestCase):
         self.assertIn("did not settle", err.getvalue())
         self.assertIn("s1", err.getvalue())
 
+    def test_apply_and_wait_reapplies_when_the_state_does_not_settle(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, state={"s1": False, "s2": False})
+        intended = {"s1": True, "s2": False}
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "_wait_for_state", side_effect=[1, 0]) as wait_mock, \
+             mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            rc = cli._apply_and_wait(target.name, mod, {"s1": False, "s2": False}, intended)
+        self.assertEqual(rc, 0)
+        # the apply is re-issued: the first attempt did not take effect live
+        self.assertEqual(mod.apply.call_count, 2)
+        self.assertEqual(wait_mock.call_count, 2)
+        self.assertIn("re-applying", err.getvalue())
+
+    def test_apply_and_wait_reports_failure_after_the_last_attempt(self):
+        from domain import cli
+        target = _fake_target()
+        mod = _fake_module(target, state={"s1": False, "s2": False})
+        intended = {"s1": True, "s2": False}
+        with mock.patch.object(cli, "TARGETS", {target.name: target}), \
+             mock.patch.object(cli, "_wait_for_state", return_value=1), \
+             mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            rc = cli._apply_and_wait(target.name, mod, {"s1": False, "s2": False}, intended)
+        self.assertEqual(rc, 1)
+        self.assertEqual(mod.apply.call_count, 2)
+
     def test_on_invokes_wait_for_state_after_apply(self):
         from domain import cli
         target = _fake_target()
@@ -246,7 +273,7 @@ class CliWaitForStateTests(unittest.TestCase):
             rc = cli.main(["on", target.name, "s1"])
         self.assertEqual(rc, 0)
         mod.apply.assert_called_once_with({"s1": False, "s2": False}, {"s1": True, "s2": False})
-        wait_mock.assert_called_once_with(target.name, mod, {"s1": True, "s2": False})
+        wait_mock.assert_called_once_with(target.name, mod, {"s1": True, "s2": False}, quiet=True)
 
     def test_off_invokes_wait_for_state_after_apply(self):
         from domain import cli
@@ -259,7 +286,7 @@ class CliWaitForStateTests(unittest.TestCase):
             rc = cli.main(["off", target.name, "s1"])
         self.assertEqual(rc, 0)
         mod.apply.assert_called_once_with({"s1": True, "s2": False}, {"s1": False, "s2": False})
-        wait_mock.assert_called_once_with(target.name, mod, {"s1": False, "s2": False})
+        wait_mock.assert_called_once_with(target.name, mod, {"s1": False, "s2": False}, quiet=True)
 
     def test_reset_invokes_wait_for_state_after_apply(self):
         from domain import cli
@@ -272,7 +299,7 @@ class CliWaitForStateTests(unittest.TestCase):
             rc = cli.main(["reset", target.name])
         self.assertEqual(rc, 0)
         mod.apply.assert_called_once_with({"s1": True, "s2": True}, {"s1": False, "s2": False})
-        wait_mock.assert_called_once_with(target.name, mod, {"s1": False, "s2": False})
+        wait_mock.assert_called_once_with(target.name, mod, {"s1": False, "s2": False}, quiet=True)
 
 
 if __name__ == "__main__":
