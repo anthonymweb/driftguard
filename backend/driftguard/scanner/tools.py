@@ -261,10 +261,19 @@ def run_httpx(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict[str, Any]:
     proc = _run(cmd, timeout=timeout)
     try:
         return parse_httpx(proc.stdout or proc.stderr, str(url))
-    except ToolError:
+    except ToolError as primary_error:
+        # The installed httpx may be the ProjectDiscovery CLI rather than the
+        # Python one; try its flags. If that fails too, report *both* failures
+        # so the first (usually the informative one) is not masked.
         cmd_pd = [binary, "-u", str(url), "-json", "-silent", "-no-verify"]
         proc2 = _run(cmd_pd, timeout=timeout)
-        return parse_httpx_json(proc2.stdout, str(url))
+        try:
+            return parse_httpx_json(proc2.stdout, str(url))
+        except ToolError as fallback_error:
+            raise ToolError(
+                f"httpx output could not be parsed: {primary_error}; "
+                f"the ProjectDiscovery-style fallback also failed: {fallback_error}"
+            ) from primary_error
 
 
 def parse_httpx_json(output: str, url: str) -> dict[str, Any]:

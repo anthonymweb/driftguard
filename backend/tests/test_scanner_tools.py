@@ -157,6 +157,13 @@ class GobusterAdapterTests(unittest.TestCase):
         self.assertIn("found", out)
         self.assertEqual(out["found"], [{"path": "/health", "status": 200, "size": 42}])
 
+    def test_parse_gobuster_with_no_hits_is_an_empty_result_not_a_failure(self):
+        # A clean scan that found nothing is a valid observation, not a parse
+        # failure: the banner and progress lines must be filtered out and the
+        # result must be an empty list rather than an error.
+        out = tools.parse_gobuster(read_fixture("gobuster_8443_nohits.txt"))
+        self.assertEqual(out, {"found": []})
+
     def test_run_gobuster_nonzero_exit_raises(self):
         cp = subprocess.CompletedProcess(["gobuster"], 1, stdout="", stderr="err")
         with mock.patch.object(tools, "_which", return_value="/usr/bin/gobuster"), \
