@@ -104,13 +104,14 @@ def apply(previous: dict[str, bool], current: dict[str, bool]) -> None:
     # The published-port state is converged *absolutely* rather than by diffing
     # against `previous`: the recorded state can disagree with reality (a
     # recreate that did not take effect, or an external `docker compose` run),
-    # and a diff could never repair that. Recreating is idempotent, so this is
-    # safe to do every time.
+    # and a diff could never repair that. The live port decides, so a recreate
+    # happens only when reality differs from the intent.
     recreated = False
-    if current.get("port-open"):
+    published = _drift_port_published()
+    if current.get("port-open") and not published:
         compose.recreate(COMPOSE_FILE, OVERRIDE_PATH)
         recreated = True
-    elif _drift_port_published():
+    elif not current.get("port-open") and published:
         compose.recreate(COMPOSE_FILE, None)
         recreated = True
     compose.reload_nginx(COMPOSE_FILE)
