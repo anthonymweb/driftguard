@@ -1,0 +1,16 @@
+name: civic-portal-lab
+
+services:
+  api:
+    build: ../api
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "127.0.0.1:8445:443"
+      - "127.0.0.1:8083:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../certs:/etc/nginx/certs:ro
+      - ../dist:/usr/share/nginx/html:ro
+    depends_on:
+      - api

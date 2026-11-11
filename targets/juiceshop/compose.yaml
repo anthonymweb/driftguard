@@ -1,0 +1,20 @@
+name: juice-shop-lab
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "127.0.0.1:8446:443"
+      - "127.0.0.1:8085:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../certs:/etc/nginx/certs:ro
+    depends_on:
+      - juice-shop
+    restart: unless-stopped
