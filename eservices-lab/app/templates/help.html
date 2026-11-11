@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Help centre — eServices{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>Help centre</h1>
+  <p class="muted">Answers to common questions about using this demonstration portal. Information here relates to fictional services and sample data only.</p>
+</header>
+
+<section class="card faq" aria-labelledby="faq-title">
+  <h2 id="faq-title">Frequently asked questions</h2>
+  {% for item in faq %}
+  <details>
+    <summary>{{ item.q }}</summary>
+    <p class="muted" style="margin:8px 0 0;">{{ item.a }}</p>
+  </details>
+  {% endfor %}
+</section>
+
+<section class="card" style="margin-top:18px;" aria-labelledby="contact-title">
+  <h2 id="contact-title">Further assistance</h2>
+  <p class="muted">This is a controlled demonstration environment. There are no real support channels, phone numbers, or offices. For questions about a sample request, refer to the reference shown in the Applications area.</p>
+</section>
+{% endblock %}

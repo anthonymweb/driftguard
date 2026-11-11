@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Records lookup — eServices{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>Records lookup</h1>
+  <p class="muted">Enter a record reference and your API key to view a sample citizen record. The key is required by the records service and is not stored in this page.</p>
+</header>
+
+<section class="card" aria-labelledby="lookup-title">
+  <h2 id="lookup-title">Find a record</h2>
+  <form id="record-form" class="form">
+    <label for="record-id">Record reference
+      <input id="record-id" name="record_id" type="text" required placeholder="e.g. TEST-0001" autocomplete="off">
+    </label>
+    <label for="api-key">API key
+      <input id="api-key" name="api_key" type="password" required placeholder="Enter the API key provided to you" autocomplete="off">
+    </label>
+    <p class="muted" style="margin:0;">The API key must be supplied for each lookup. It is sent only with your request and is never embedded in this page.</p>
+    <div>
+      <button class="btn" type="submit">Look up record</button>
+    </div>
+  </form>
+  <div id="record-result" class="result" aria-live="polite">Enter a reference and API key to view a record card.</div>
+</section>
+
+<section class="card" style="margin-top:18px;" aria-labelledby="notes-title">
+  <h2 id="notes-title">Notes</h2>
+  <ul class="checklist">
+    <li>Record references use the format <code>TEST-####</code> (fictional).</li>
+    <li>Access is protected: requests without a valid key are rejected.</li>
+    <li>All records shown are generated demonstration data.</li>
+  </ul>
+</section>
+{% endblock %}

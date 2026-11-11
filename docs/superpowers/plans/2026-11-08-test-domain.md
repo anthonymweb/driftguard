@@ -18,7 +18,8 @@
 - Classification labels are exactly `BASELINE`, `NEW`, `PERSISTENT`, `FIXED`, `RECURRING`, `NO DRIFT`. The rules must not change (spec §6.4).
 - `finding_key` is exactly `<target>/<area>/<scenario>` with `area` ∈ {`TLS`, `Network`, `API`}. Schema frozen by spec §6.4 before any row is written.
 - Fictional identifiers only: `TEST-0001`, `CMTEST00000001`, `+256700000001`, `10.20.0.0/24`, `lab-demo-key`.
-- Never modify: `eservices-lab/lab.py`, `eservices-lab/app/server.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `democommerce/backend/**`, `democommerce/deploy/compose.yaml`, `democommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, or Juice Shop / VAmPI image contents. Sole exception: `eservices-lab/README.md` gains a pointer to `domain.py`.
+- Never modify: `eservices-lab/lab.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `democommerce/backend/**`, `democommerce/deploy/compose.yaml`, `democommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, or Juice Shop / VAmPI image contents. Sole exception: `eservices-lab/README.md` gains a pointer to `domain.py`.
+- **Amended exception (approved after the test-domain phase, Task 14):** `eservices-lab/app/server.py` and `eservices-lab/app/Dockerfile` may be changed for the eServices target's **presentation and demo data only**. Its API contract is frozen and pinned by `eservices-lab/app/tests/test_server.py`: `/health` keeps its body; `/api/v1/services` stays a list whose entries keep `id`, `name`, `dept`; `/api/v1/records/<rid>` keeps its 401/404 behaviour and its record fields; `/api/v1/admin/debug` returns a **byte-identical** payload (it is both the `api-debug` drift surface and the redaction baseline); the §6.6 fictional-identifier conventions are unchanged and extended only in the same style.
 - CLI contract frozen by spec §6.6: `up [target]`, `down [target]`, `status [--json]`, `on <target> <scenario>`, `off <target> <scenario>`, `reset [target]`, `mark <label>`, `truth [--json]`, `verify [--json]`.
 - Test command from repo root: `python3 -m unittest discover -s tests -v`.
 - Commit at the end of every task.
@@ -923,4 +924,80 @@ Three lines at the end of `eservices-lab/README.md` pointing at `domain.py` as t
 
 ```bash
 git add -A && git commit -m "feat(domain): nine-scan sequence, operator guide and entry-point note"
+```
+
+---
+
+## Task 14: eServices target — realistic portal frontend and demo data
+
+**Rationale.** The eServices target is the asset DriftGuard assesses, and its portal is a
+45-line Flask route returning a bare heading and a three-item list. A scanner that
+demonstrably finds drift in a visible stub is unconvincing. This task gives the target a
+citizen-facing government portal with a realistic dataset — **without touching the
+contract the measurement depends on** (see the amended Global Constraints above).
+
+**Files:**
+- Create: `eservices-lab/app/demo_data.py`, `eservices-lab/app/templates/*.html`,
+  `eservices-lab/app/static/app.css`, `eservices-lab/app/static/app.js`
+- Create: `eservices-lab/app/tests/test_server.py`
+- Modify: `eservices-lab/app/server.py` (presentation + additive routes only), `eservices-lab/app/Dockerfile` (copy the new assets in)
+
+**Interfaces:**
+- **The API contract is frozen and is pinned by the new test file.** `GET /health` keeps
+  its body. `GET /api/v1/services` stays a JSON list whose entries keep `id`, `name`,
+  `dept` (extra keys allowed). `GET /api/v1/records/<rid>` keeps its 401-without-`X-API-Key`
+  and 404-for-unknown behaviour and its record fields, because `GET /api/v1/admin/debug`
+  exposes `RECORDS["TEST-0001"]`. `GET /api/v1/admin/debug` returns a **byte-identical**
+  payload — it is simultaneously the `api-debug` drift surface and the baseline the
+  redaction zero-leakage check greps for.
+- Fictional identifiers follow spec §6.6 and are extended only in the same style:
+  `TEST-%04d`, `CMTEST%08d`, `+256700000001` (and the `+256700000%03d` family),
+  `10.20.0.0/24`, `*.eservices.test`, `lab-demo-key`. **No real hostname, real IP or
+  personal data anywhere.**
+- Additive read routes for the portal: `GET /api/v1/services/<id>`,
+  `GET /api/v1/applications`, `GET /api/v1/applications/<ref>`, `GET /api/v1/notices`,
+  `GET /api/v1/departments`, and `POST /api/v1/applications` (creates a fictional sample
+  application with a reference number). None of them may weaken the existing routes.
+
+- [ ] **Step 1: Write the failing tests**
+
+  `eservices-lab/app/tests/test_server.py` — a `unittest` suite (the lab app has none
+  today) that pins the frozen contract and the new pages:
+
+  ```python
+  class ContractTests(unittest.TestCase):
+      def test_health_body_is_unchanged(self): ...
+      def test_services_is_a_list_keeping_id_name_dept(self): ...
+      def test_records_requires_the_api_key(self): ...
+      def test_unknown_record_is_404(self): ...
+      def test_debug_payload_is_byte_identical(self): ...   # the whole point
+      def test_demo_data_holds_no_real_looking_identifiers(self): ...
+  class PortalTests(unittest.TestCase):
+      def test_home_page_renders_the_catalogue(self): ...
+      def test_service_page_renders_one_service(self): ...
+      def test_applications_page_renders_sample_references(self): ...
+  ```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 3: Implement the dataset, the templates and the stylesheet**
+- [ ] **Step 4: Amend `server.py` minimally and add the additive routes**
+- [ ] **Step 5: Run the tests to verify they pass** — both suites:
+  `python3 -m unittest discover -s eservices-lab/app/tests -v` and
+  `python3 -m unittest discover -s tests -v` (the domain's 175 tests must still pass).
+- [ ] **Step 6: Re-verify the domain live**
+
+  ```bash
+  python3 domain.py up eservices-lab
+  python3 domain.py verify          # must exit 0: all five eservices probes intact
+  curl -sk https://127.0.0.1:8443/api/v1/admin/debug   # byte-identical to before
+  ```
+
+  The `api-debug` probe hits `/api/v1/admin/debug` and the `cert-mismatch` probe depends
+  on the certificate, so both must still behave exactly as before. Then re-run
+  `python3 sequence.py` and confirm the §6.5 classification matrix is unchanged —
+  `eservices-lab` is the only target carrying `cert-mismatch`.
+- [ ] **Step 7: Commit**
+
+```bash
+git add -A && git commit -m "feat(eservices-lab): realistic portal frontend and demo data"
 ```

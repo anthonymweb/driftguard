@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}eServices — Demo Commonwealth{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <div class="demo-ribbon" role="note">
+    <strong>DEMONSTRATION SITE — fictional data only.</strong>
+    This portal uses sample records and does not provide real government services.
+  </div>
+  <div class="utility-bar">
+    <div class="utility-inner">
+      <span>Demo Commonwealth &middot; Citizen Services</span>
+      <span><a href="{{ url_for('help_page') }}">Help</a> &middot; <a href="{{ url_for('notices_page') }}">Service notices</a></span>
+    </div>
+  </div>
+  <header class="site-header">
+    <div class="brand-bar">
+      <a class="brand" href="{{ url_for('portal') }}">
+        <span class="crest" aria-hidden="true">eS</span>
+        <span class="wordmark">
+          <span class="title">eServices</span>
+          <span class="sub">Demo Commonwealth</span>
+        </span>
+      </a>
+      <p class="tag">A simulated citizen services portal</p>
+    </div>
+    <nav class="primary-nav" aria-label="Primary">
+      <div class="nav-inner">
+        <a href="{{ url_for('portal') }}" {% if active == 'home' %}aria-current="page"{% endif %}>Home</a>
+        <a href="{{ url_for('portal') }}#catalogue" {% if active == 'services' %}aria-current="page"{% endif %}>Services</a>
+        <a href="{{ url_for('records_page') }}" {% if active == 'records' %}aria-current="page"{% endif %}>Records lookup</a>
+        <a href="{{ url_for('applications_page') }}" {% if active == 'applications' %}aria-current="page"{% endif %}>Applications</a>
+        <a href="{{ url_for('notices_page') }}" {% if active == 'notices' %}aria-current="page"{% endif %}>Notices</a>
+        <a href="{{ url_for('help_page') }}" {% if active == 'help' %}aria-current="page"{% endif %}>Help centre</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <div class="wrap">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div><strong>eServices — Demo Commonwealth</strong></div>
+      <div class="footer-meta">This is a demonstration site. All names, identifiers, addresses and references are fictional and for testing only.</div>
+      <div class="footer-meta">Departments: {% for d in departments %}{{ d.name }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</div>
+      <div class="footer-meta">&copy; 2026 Demo Commonwealth (fictional). <a href="{{ url_for('help_page') }}">Help centre</a></div>
+    </div>
+  </footer>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

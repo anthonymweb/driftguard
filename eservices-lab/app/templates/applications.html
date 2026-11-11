@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Applications — eServices{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>Applications</h1>
+  <p class="muted">View sample application references and start a new fictional request. Submissions create demonstration records only.</p>
+</header>
+
+<section class="card" aria-labelledby="start-title">
+  <h2 id="start-title">Start a sample request</h2>
+  <form id="application-form" class="form">
+    <label for="service-id">Service
+      <select id="service-id" name="service_id" required>
+        {% for s in services %}
+        <option value="{{ s.id }}">{{ s.id }} — {{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label for="applicant-name">Applicant name (sample)
+      <input id="applicant-name" name="applicant" type="text" placeholder="e.g. Sample Resident 010">
+    </label>
+    <div><button class="btn" type="submit">Create sample application</button></div>
+  </form>
+  <div id="application-result" class="result" aria-live="polite">Complete the form to receive a fictional reference.</div>
+</section>
+
+<section class="card" style="margin-top:18px;" aria-labelledby="list-title">
+  <h2 id="list-title">Sample applications</h2>
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Reference</th>
+          <th scope="col">Service</th>
+          <th scope="col">Applicant</th>
+          <th scope="col">Status</th>
+          <th scope="col">Submitted</th>
+        </tr>
+      </thead>
+      <tbody id="applications-body">
+        {% for a in applications %}
+        <tr>
+          <td><code>{{ a.reference }}</code></td>
+          <td>{{ a.service_name }}</td>
+          <td>{{ a.applicant }}</td>
+          <td class="status">{{ a.status }}</td>
+          <td>{{ a.submitted }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

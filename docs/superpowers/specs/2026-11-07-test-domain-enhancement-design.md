@@ -321,7 +321,17 @@ python3 domain.py verify [--json]         # exit code 0 only if every probe matc
 | `ground_truth.csv`, `scans.json` | authoritative domain ground truth |
 | `docs/domain.md` | operator guide: bringing the domain up, running the scan sequence, reading `truth` |
 
-**Files explicitly not modified:** `eservices-lab/lab.py`, `eservices-lab/app/server.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `democommerce/backend/**`, `democommerce/deploy/compose.yaml`, `democommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, and all Juice Shop / VAmPI image contents. The single exception is `eservices-lab/README.md`, which gains a short pointer to `domain.py` as the supported entry point.
+**Files explicitly not modified:** `eservices-lab/lab.py`, `eservices-lab/nginx/*`, `eservices-lab/docker-compose.yml`, `democommerce/backend/**`, `democommerce/deploy/compose.yaml`, `democommerce/deploy/nginx/demo.conf.template`, `civic-services-portal/src/**`, and all Juice Shop / VAmPI image contents. The single exception is `eservices-lab/README.md`, which gains a short pointer to `domain.py` as the supported entry point.
+
+**Amended exception — the eServices target's own presentation (approved after the test-domain phase).** `eservices-lab/app/server.py` and `eservices-lab/app/Dockerfile` may be changed **for the portal's presentation and its demo data only**. The *contract* is frozen and is enforced by `eservices-lab/app/tests/test_server.py`:
+
+- `GET /health` returns the same body.
+- `GET /api/v1/services` remains a JSON **list** whose entries keep the `id`, `name` and `dept` keys; additional keys are permitted.
+- `GET /api/v1/records/<rid>` keeps its authentication behaviour (401 without `X-API-Key`, 404 for an unknown identifier) and its record fields, because `GET /api/v1/admin/debug` exposes `RECORDS["TEST-0001"]`.
+- `GET /api/v1/admin/debug` returns a **byte-identical** payload — it is simultaneously the `api-debug` drift surface and the baseline the redaction zero-leakage check greps for.
+- The fictional-identifier conventions of §6.6 are unchanged and are extended only in the same style (`TEST-%04d`, `CMTEST%08d`, `+2567…`, `10.20.0.0/24`, `*.eservices.test`, `lab-demo-key`). No real hostname, real IP or personal data is introduced.
+
+The reason for the exception: the eServices target is the asset the scanner assesses, and a target that is visibly a stub makes the evaluation look unconvincing. The contract is what the measurement depends on; the presentation is not.
 
 ### 6.8 Verification
 

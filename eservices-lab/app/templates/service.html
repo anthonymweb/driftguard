@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }} — eServices{% endblock %}
+{% block content %}
+<nav aria-label="Breadcrumb" class="muted" style="margin-bottom:12px;">
+  <a href="{{ url_for('portal') }}">Home</a> &rsaquo; <a href="{{ url_for('portal') }}#catalogue">Services</a> &rsaquo; {{ service.id }}
+</nav>
+<header class="page-head">
+  <h1>{{ service.id }} — {{ service.name }}</h1>
+  <p class="muted">{{ service.dept }} &middot; {{ service.category }}</p>
+</header>
+
+<div class="grid two">
+  <section class="card" aria-labelledby="about-svc">
+    <h2 id="about-svc">About this service</h2>
+    <p>{{ service.description }}</p>
+    <p><strong>Estimated time:</strong> {{ service.time }}<br>
+       <strong>Fee:</strong> {{ service.fee }}</p>
+  </section>
+
+  <section class="card" aria-labelledby="need-svc">
+    <h2 id="need-svc">What you will need</h2>
+    <ul class="checklist">
+      {% for item in service.needs %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="card" style="margin-top:18px;" aria-labelledby="steps-svc">
+  <h2 id="steps-svc">Steps</h2>
+  <ol class="steps">
+    {% for step in service.steps %}
+    <li>{{ step }}</li>
+    {% endfor %}
+  </ol>
+  <p style="margin-top:14px;"><a class="btn" href="{{ url_for('applications_page') }}">Start a sample request</a>
+     <a class="btn secondary" href="{{ url_for('portal') }}#catalogue">Back to catalogue</a></p>
+</section>
+{% endblock %}
