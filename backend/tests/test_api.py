@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from driftguard.database import Base, get_db
+from driftguard.database import Base, get_db, get_session_factory
 from driftguard.main import app
 
 
@@ -30,6 +30,9 @@ class ApiAuthorizationTests(unittest.TestCase):
                 db.close()
 
         app.dependency_overrides[get_db] = override_db
+        # the background assessment opens its own session, so it needs the
+        # test's database too
+        app.dependency_overrides[get_session_factory] = lambda: factory
         self.client = TestClient(app)
 
     def tearDown(self):
@@ -47,14 +50,37 @@ class ApiAuthorizationTests(unittest.TestCase):
         response = self.client.post(f"/api/targets/{target.json()['id']}/scans")
         self.assertEqual(response.status_code, 403)
 
-    def test_authorized_active_scoped_target_records_queued_request(self):
-        target = self.client.post("/api/targets", json={
+    def test_authorized_target_must_say_who_authorised_it(self):
+        # A target may not claim to be authorised without recording who
+        # authorised the assessment, when, and on what basis.
+        response = self.client.post("/api/targets", json={
             "name": "Local lab", "address": "https://localhost:8443", "target_type": "web",
             "authorization_status": "authorized", "approved_scope": ["tls"], "approved_ports": [8443],
         })
-        response = self.client.post(f"/api/targets/{target.json()['id']}/scans")
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.json()["status"], "queued")
+        self.assertEqual(response.status_code, 422)
+
+    def test_authorized_active_scoped_target_is_assessed(self):
+        from unittest import mock
+        target = self.client.post("/api/targets", json={
+            "name": "Local lab", "address": "https://localhost:8443", "target_type": "web",
+            "authorization_status": "authorized", "approved_scope": ["tls"], "approved_ports": [8443],
+            "authorized_by": "researcher", "authorized_at": "2026-11-13T09:00:00Z",
+            "authorization_basis": "LAB-2026-01",
+        })
+        self.assertEqual(target.status_code, 201)
+        with mock.patch("driftguard.scanner.tools.run_testssl", return_value={
+            "protocols": {"TLS1_2": True}, "cipher_issues": [],
+            "cert": {"cert_commonName": "localhost"},
+        }):
+            response = self.client.post(f"/api/targets/{target.json()['id']}/scans")
+            self.assertEqual(response.status_code, 201)
+            # the request returns promptly with the scan queued; the assessment
+            # then runs in the background
+            self.assertEqual(response.json()["status"], "queued")
+            scans = self.client.get(f"/api/targets/{target.json()['id']}/scans")
+        self.assertEqual(scans.status_code, 200)
+        self.assertEqual(scans.json()[0]["status"], "completed")
+        self.assertIsNotNone(scans.json()[0]["completed_at"])
 
     def test_out_of_range_port_rejected(self):
         response = self.client.post("/api/targets", json={

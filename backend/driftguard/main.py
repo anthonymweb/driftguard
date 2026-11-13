@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
-from .database import Base, engine, get_db
+from .database import Base, engine, get_db, get_session_factory
 from .scanner.engine import ScanRefused, ensure_scannable, run_scan_in_background
 from .schemas import EvidenceRead, ScanRead, TargetCreate, TargetRead
 
@@ -61,7 +61,8 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/targets/{target_id}/scans", response_model=ScanRead, status_code=status.HTTP_201_CREATED)
-def record_scan_request(target_id: int, background: BackgroundTasks, db: Session = Depends(get_db)):
+def record_scan_request(target_id: int, background: BackgroundTasks, db: Session = Depends(get_db),
+                        session_factory=Depends(get_session_factory)):
     """Run an assessment for an active, explicitly authorised target with approved scope.
 
     The scan is queued and the assessment runs in the background; the scan's status moves
@@ -84,7 +85,7 @@ def record_scan_request(target_id: int, background: BackgroundTasks, db: Session
     db.add(scan)
     db.commit()
     db.refresh(scan)
-    background.add_task(run_scan_in_background, scan.id)
+    background.add_task(run_scan_in_background, scan.id, session_factory)
     return scan
 
 

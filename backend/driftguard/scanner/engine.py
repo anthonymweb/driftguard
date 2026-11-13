@@ -256,9 +256,14 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
     return scan
 
 
-def run_scan_in_background(scan_id: int) -> None:
-    """Background entry point: open a fresh session and run the queued scan."""
-    db = database.SessionLocal()
+def run_scan_in_background(scan_id: int, session_factory=None) -> None:
+    """Background entry point: open a fresh session and run the queued scan.
+
+    *session_factory* lets the caller supply the session factory (the API
+    resolves it as a dependency, so a test can point the assessment at its own
+    database).
+    """
+    db = (session_factory or database.SessionLocal)()
     try:
         scan = db.get(models.Scan, scan_id)
         if scan is None:

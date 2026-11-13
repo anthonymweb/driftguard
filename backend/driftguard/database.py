@@ -21,3 +21,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def get_session_factory():
+    """The session factory the background assessment uses.
+
+    A background task runs after the request's session is closed, so it opens
+    its own. Exposing the factory as a dependency means a test can point the
+    assessment at its own database exactly as it points the request at one.
+    """
+    return SessionLocal
