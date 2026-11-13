@@ -130,17 +130,21 @@ def derive_http_url(address: str, approved_ports: list[int] | None = None) -> st
                     f"target address port {int(explicit)} is not in approved_ports; the engine may only assess approved ports"
                 )
             return addr.rstrip("/")
-        # No explicit port: choose an approved port for this scheme.
+        # No explicit port: choose an approved port for this scheme, keeping any
+        # path and query the address carried.
+        suffix = parsed.path or ""
+        if parsed.query:
+            suffix = f"{suffix}?{parsed.query}"
         if scheme == "http":
             for p in (*PLAIN_HTTP_PORTS, 443, 8443):
                 if p in ports:
-                    return f"http://{host}:{p}"
+                    return f"http://{host}:{p}{suffix}"
         else:
             for p in (443, 8443, *PLAIN_HTTP_PORTS):
                 if p in ports:
-                    return f"https://{host}:{p}"
+                    return f"https://{host}:{p}{suffix}"
         if ports:
-            return f"{scheme}://{host}:{ports[0]}"
+            return f"{scheme}://{host}:{ports[0]}{suffix}"
         raise ScanRefused("cannot derive an HTTP URL: no approved ports")
 
     # host or host:port
