@@ -98,6 +98,7 @@ class ScanRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     target_id: int
+    label: str | None = None
     status: str
     started_at: datetime
     completed_at: datetime | None

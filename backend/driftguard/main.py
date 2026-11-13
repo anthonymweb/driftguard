@@ -61,13 +61,15 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/targets/{target_id}/scans", response_model=ScanRead, status_code=status.HTTP_201_CREATED)
-def record_scan_request(target_id: int, background: BackgroundTasks, db: Session = Depends(get_db),
-                        session_factory=Depends(get_session_factory)):
+def record_scan_request(target_id: int, background: BackgroundTasks, label: str | None = None,
+                        db: Session = Depends(get_db), session_factory=Depends(get_session_factory)):
     """Run an assessment for an active, explicitly authorised target with approved scope.
 
     The scan is queued and the assessment runs in the background; the scan's status moves
     from queued to completed, completed_with_errors, or failed as the assessment proceeds.
     A target that is not scannable is refused with an explicit reason and no scan is run.
+    An optional ground-truth scan label (for example ``?label=S3``) can be stored so the
+    scan can be joined to the lab's recorded observations.
     """
     target = db.get(models.Target, target_id)
     if target is None:
@@ -81,7 +83,7 @@ def record_scan_request(target_id: int, background: BackgroundTasks, db: Session
         else:
             code = 422
         raise HTTPException(status_code=code, detail=f"Scan refused: {reason}")
-    scan = models.Scan(target_id=target.id, status="queued")
+    scan = models.Scan(target_id=target.id, status="queued", label=label)
     db.add(scan)
     db.commit()
     db.refresh(scan)
