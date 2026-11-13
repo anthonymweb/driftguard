@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .database import Base, engine, get_db, get_session_factory
+from .redaction import redact_evidence_payload
 from .scanner.engine import ScanRefused, ensure_scannable, run_scan_in_background
 from .schemas import EvidenceRead, ScanRead, TargetCreate, TargetRead
 
@@ -103,3 +104,30 @@ def list_evidence(scan_id: int, db: Session = Depends(get_db)):
     if db.get(models.Scan, scan_id) is None:
         raise HTTPException(status_code=404, detail="Scan not found")
     return list(db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan_id).order_by(models.Evidence.id)))
+
+
+@app.get("/api/scans/{scan_id}/evidence/redacted", response_model=list[EvidenceRead])
+def list_evidence_redacted(scan_id: int, db: Session = Depends(get_db)):
+    """Shareable view: evidence with sensitive values tokenised.
+
+    This is the redacted/raw boundary — the form that may be shared or sent to an
+    AI. The token map is kept local-only and is never returned.
+    """
+    if db.get(models.Scan, scan_id) is None:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    rows = list(db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan_id).order_by(models.Evidence.id)))
+    redacted = []
+    for ev in rows:
+        payload = {
+            "id": ev.id,
+            "scan_id": ev.scan_id,
+            "fingerprint": ev.fingerprint,
+            "category": ev.category,
+            "title": ev.title,
+            "severity": ev.severity,
+            "resource": ev.resource,
+            "details": ev.details,
+            "observed_at": ev.observed_at,
+        }
+        redacted.append(redact_evidence_payload(payload))
+    return redacted
