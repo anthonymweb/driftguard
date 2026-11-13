@@ -54,6 +54,16 @@ def _finalize_counts(counts: dict[str, Any]) -> dict[str, Any]:
     return counts
 
 
+def _sum_area_counts(per_area: Mapping[str, Any]) -> dict[str, Any]:
+    """Roll a target's per-area counts up into one set of totals."""
+    totals = _new_area_counts()
+    for counts in per_area.values():
+        for key in totals:
+            if key in counts and isinstance(totals[key], int) and isinstance(counts[key], int):
+                totals[key] += counts[key]
+    return totals
+
+
 def evaluate(
     truth_matrix: Mapping[str, Mapping[str, list[str | None]]],
     engine_evidence_by_label: Mapping[str, Iterable[str]],
@@ -185,6 +195,8 @@ def evaluate(
     for tdata in per_target.values():
         for counts in tdata["per_area"].values():
             _finalize_counts(counts)
+        # A per-target roll-up, so a target can be read without summing its areas.
+        tdata["overall"] = _finalize_counts(_sum_area_counts(tdata["per_area"]))
 
     report = {
         "per_target": per_target,
@@ -271,8 +283,10 @@ def main(argv: list[str] | None = None) -> int:
     scan_labels = [s.label for s in scans]
     planted = planted_from_registry(targets)
 
-    # Load engine evidence from DB.
-    from driftguard.database import SessionLocal
+    # Load engine evidence from DB. The schema is created if this is a fresh
+    # database, so the evaluator is runnable before the API has ever started.
+    from driftguard.database import Base, SessionLocal, engine
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         evidence_by_label, _ = load_engine_evidence(db)

@@ -122,7 +122,7 @@ def sync_targets(
     Returns the number of lab targets processed.
     """
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parents[3]
+        repo_root = Path(__file__).resolve().parents[2]
     defaults = _default_authorization()
     by = authorized_by or defaults["authorized_by"]
     at = authorized_at or defaults["authorized_at"]
@@ -141,6 +141,9 @@ def sync_targets(
             for key, value in payload.items():
                 setattr(existing, key, value)
         count += 1
+    # The sync is what puts the targets in the registry, so it commits them:
+    # a caller (a script, or the API) must not have to remember to.
+    db.commit()
     return count
 
 
@@ -150,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--authorized-by", default=None)
     parser.add_argument("--authorization-basis", default=None)
     args = parser.parse_args(argv)
-    repo_root = Path(args.repo_root) if args.repo_root else Path(__file__).resolve().parents[3]
+    repo_root = Path(args.repo_root) if args.repo_root else Path(__file__).resolve().parents[2]
     db = SessionLocal()
     try:
         count = sync_targets(
