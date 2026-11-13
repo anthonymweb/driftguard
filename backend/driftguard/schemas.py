@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 import ipaddress
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TargetCreate(BaseModel):
@@ -13,8 +13,13 @@ class TargetCreate(BaseModel):
     address: str = Field(min_length=1, max_length=500)
     target_type: Literal["web", "api", "host"]
     authorization_status: Literal["pending", "authorized"] = "pending"
+    authorized_by: str | None = Field(default=None, min_length=1, max_length=200)
+    authorized_at: datetime | None = None
+    authorization_basis: str | None = Field(default=None, min_length=1, max_length=500)
     approved_scope: list[Literal["tls", "network", "http_api"]] = Field(default_factory=list)
     approved_ports: list[int] = Field(default_factory=list)
+    discovery_enabled: bool = False
+    discovery_wordlist: str | None = Field(default=None, max_length=1000)
     status: Literal["active", "inactive"] = "active"
 
     @field_validator("address")
@@ -51,6 +56,25 @@ class TargetCreate(BaseModel):
             raise ValueError("approved ports must be between 1 and 65535")
         return sorted(set(ports))
 
+    @model_validator(mode="after")
+    def require_authorization_record(self):
+        if self.authorization_status == "authorized":
+            missing = [
+                name
+                for name, value in (
+                    ("authorized_by", self.authorized_by),
+                    ("authorized_at", self.authorized_at),
+                    ("authorization_basis", self.authorization_basis),
+                )
+                if value is None or (isinstance(value, str) and not value.strip())
+            ]
+            if missing:
+                raise ValueError(
+                    "authorized targets must record who authorised the assessment, when, and on what basis: "
+                    + ", ".join(missing)
+                )
+        return self
+
 
 class TargetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -59,8 +83,13 @@ class TargetRead(BaseModel):
     address: str
     target_type: str
     authorization_status: str
+    authorized_by: str | None
+    authorized_at: datetime | None
+    authorization_basis: str | None
     approved_scope: list[str]
     approved_ports: list[int]
+    discovery_enabled: bool
+    discovery_wordlist: str | None
     status: str
     created_at: datetime
 
@@ -73,6 +102,7 @@ class ScanRead(BaseModel):
     started_at: datetime
     completed_at: datetime | None
     is_baseline: bool
+    error: str | None = None
 
 
 class EvidenceRead(BaseModel):

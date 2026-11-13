@@ -2,13 +2,14 @@
 from contextlib import asynccontextmanager
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import models
 from .database import Base, engine, get_db
+from .scanner.engine import ScanRefused, ensure_scannable, run_scan_in_background
 from .schemas import EvidenceRead, ScanRead, TargetCreate, TargetRead
 
 
@@ -60,23 +61,30 @@ def get_target(target_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/targets/{target_id}/scans", response_model=ScanRead, status_code=status.HTTP_201_CREATED)
-def record_scan_request(target_id: int, db: Session = Depends(get_db)):
-    """Create an auditable scan request only for an active, explicitly authorized target.
+def record_scan_request(target_id: int, background: BackgroundTasks, db: Session = Depends(get_db)):
+    """Run an assessment for an active, explicitly authorised target with approved scope.
 
-    Assessment execution is intentionally a separate next milestone; this endpoint records
-    the authorization gate and does not claim that a network assessment has run.
+    The scan is queued and the assessment runs in the background; the scan's status moves
+    from queued to completed, completed_with_errors, or failed as the assessment proceeds.
+    A target that is not scannable is refused with an explicit reason and no scan is run.
     """
     target = db.get(models.Target, target_id)
     if target is None:
         raise HTTPException(status_code=404, detail="Target not found")
-    if target.status != "active" or target.authorization_status != "authorized":
-        raise HTTPException(status_code=403, detail="Target must be active and explicitly authorized")
-    if not target.approved_scope:
-        raise HTTPException(status_code=422, detail="Target has no approved assessment scope")
+    try:
+        ensure_scannable(target)
+    except ScanRefused as exc:
+        reason = str(exc)
+        if "must be active" in reason or "must be explicitly authorized" in reason:
+            code = 403
+        else:
+            code = 422
+        raise HTTPException(status_code=code, detail=f"Scan refused: {reason}")
     scan = models.Scan(target_id=target.id, status="queued")
     db.add(scan)
     db.commit()
     db.refresh(scan)
+    background.add_task(run_scan_in_background, scan.id)
     return scan
 
 
