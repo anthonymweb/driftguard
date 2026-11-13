@@ -33,12 +33,17 @@ def _load_lab_domain(repo_root: Path):
     domain_pkg = lab_dir / "domain"
     lab_str = str(lab_dir)
     pkg_str = str(domain_pkg)
-    # Drop cached modules that are not the lab's domain package.
+    # Any cached `domain` modules that are not the lab's own are displaced for
+    # the duration of the import and put back afterwards, so a long-lived
+    # process (the API) does not silently end up with the lab's package
+    # installed under the name `domain`.
+    displaced: dict[str, Any] = {}
     for name in list(sys.modules):
         if name == "domain" or name.startswith("domain."):
             mod = sys.modules.get(name)
             mod_file = getattr(mod, "__file__", "") or ""
             if pkg_str not in mod_file:
+                displaced[name] = mod
                 del sys.modules[name]
     inserted = False
     if lab_str not in sys.path:
@@ -52,6 +57,15 @@ def _load_lab_domain(repo_root: Path):
         importlib.reload(state)
         return config, state
     finally:
+        # Put the lab's modules back the way they were: the caller's process
+        # keeps whatever `domain` package it had before.
+        for name in list(sys.modules):
+            if name == "domain" or name.startswith("domain."):
+                mod = sys.modules.get(name)
+                mod_file = getattr(mod, "__file__", "") or ""
+                if pkg_str in mod_file:
+                    del sys.modules[name]
+        sys.modules.update(displaced)
         if inserted:
             try:
                 sys.path.remove(lab_str)
@@ -139,6 +153,12 @@ def sync_targets(
             db.add(models.Target(**payload))
         else:
             for key, value in payload.items():
+                # The authorisation record states *when* the assessment was
+                # authorised. Re-syncing must not restamp it: a fresh sync is
+                # not a fresh authorisation. It is only replaced when the
+                # caller passes an explicit timestamp.
+                if key == "authorized_at" and authorized_at is None and existing.authorized_at is not None:
+                    continue
                 setattr(existing, key, value)
         count += 1
     # The sync is what puts the targets in the registry, so it commits them:
