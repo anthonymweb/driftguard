@@ -16,6 +16,7 @@ from .. import database, drift, models
 from . import checks, tools
 
 TOOL_DELAY_SECONDS = 0.2
+PLAIN_HTTP_PORTS = (80, 8080, 8000, 3000)
 
 
 class ScanRefused(Exception):
@@ -30,6 +31,24 @@ def _has_authorization_record(target: models.Target) -> bool:
     )
 
 
+def _explicit_port(address: str) -> int | None:
+    """Return the port explicitly carried by the address, or None if implicit."""
+    addr = (address or "").strip()
+    if "://" in addr:
+        parsed = urlsplit(addr)
+    else:
+        parsed = urlsplit(f"//{addr}")
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+    return int(port) if port is not None else None
+
+
+def _approved_port_set(approved_ports: list[int] | None) -> list[int]:
+    return [int(p) for p in (approved_ports or [])]
+
+
 def ensure_scannable(target: models.Target) -> None:
     reasons: list[str] = []
     if target.status != "active":
@@ -41,6 +60,12 @@ def ensure_scannable(target: models.Target) -> None:
     if not _has_authorization_record(target):
         reasons.append(
             "target must carry an attributable authorisation record (who, when, on what basis)"
+        )
+    explicit = _explicit_port(target.address)
+    approved = _approved_port_set(getattr(target, "approved_ports", None))
+    if explicit is not None and explicit not in approved:
+        reasons.append(
+            f"target address port {explicit} is not in approved_ports; the engine may only assess approved ports"
         )
     if reasons:
         raise ScanRefused("; ".join(reasons))
@@ -63,42 +88,89 @@ def derive_host(address: str) -> str:
 
 
 def derive_tls_port(address: str, approved_ports: list[int]) -> int:
-    """Pick the TLS port: explicit port in the address, else an HTTPS-like approved port."""
-    addr = (address or "").strip()
-    if "://" in addr:
-        parsed = urlsplit(addr)
-        if parsed.port:
-            return int(parsed.port)
-    else:
-        parsed = urlsplit(f"//{addr}")
-        if parsed.port:
-            return int(parsed.port)
-    ports = [int(p) for p in (approved_ports or [])]
+    """Pick the TLS port from the approved set.
+
+    The explicit port in the address takes precedence but must already be approved
+    (enforced by ensure_scannable). Otherwise prefer 443/8443, then the first approved port.
+    """
+    ports = _approved_port_set(approved_ports)
+    explicit = _explicit_port(address)
+    if explicit is not None:
+        if explicit not in ports:
+            raise ScanRefused(
+                f"target address port {explicit} is not in approved_ports; the engine may only assess approved ports"
+            )
+        return explicit
     for preferred in (443, 8443):
         if preferred in ports:
             return preferred
     if ports:
         return ports[0]
-    raise ScanRefused("cannot derive a TLS port: no port in address and no approved ports")
+    raise ScanRefused("cannot derive a TLS port: no approved ports")
 
 
 def derive_http_url(address: str, approved_ports: list[int] | None = None) -> str:
-    """Derive the base URL for HTTP/API probing from the target address."""
+    """Derive the base (secure/API) URL for HTTP probing, using only approved ports.
+
+    An explicit address port must be approved. A URL with no explicit port is resolved to an
+    approved port for its scheme (or a reasonable approved fallback) so the returned URL
+    always identifies an approved port.
+    """
     addr = (address or "").strip()
+    ports = _approved_port_set(approved_ports)
+    host = derive_host(addr)
+
     if "://" in addr:
-        return addr.rstrip("/")
+        parsed = urlsplit(addr)
+        scheme = parsed.scheme or "https"
+        explicit = parsed.port
+        if explicit is not None:
+            if int(explicit) not in ports:
+                raise ScanRefused(
+                    f"target address port {int(explicit)} is not in approved_ports; the engine may only assess approved ports"
+                )
+            return addr.rstrip("/")
+        # No explicit port: choose an approved port for this scheme.
+        if scheme == "http":
+            for p in (*PLAIN_HTTP_PORTS, 443, 8443):
+                if p in ports:
+                    return f"http://{host}:{p}"
+        else:
+            for p in (443, 8443, *PLAIN_HTTP_PORTS):
+                if p in ports:
+                    return f"https://{host}:{p}"
+        if ports:
+            return f"{scheme}://{host}:{ports[0]}"
+        raise ScanRefused("cannot derive an HTTP URL: no approved ports")
+
+    # host or host:port
     parsed = urlsplit(f"//{addr}")
-    host = parsed.hostname or addr
-    if parsed.port:
-        return f"http://{host}:{parsed.port}"
-    ports = [int(p) for p in (approved_ports or [])]
-    for web in (80, 8080, 8000, 3000):
+    explicit = parsed.port
+    if explicit is not None:
+        if int(explicit) not in ports:
+            raise ScanRefused(
+                f"target address port {int(explicit)} is not in approved_ports; the engine may only assess approved ports"
+            )
+        return f"http://{host}:{int(explicit)}"
+    for web in PLAIN_HTTP_PORTS:
         if web in ports:
             return f"http://{host}:{web}"
     for secure in (443, 8443):
         if secure in ports:
             return f"https://{host}:{secure}"
-    return f"http://{host}"
+    if ports:
+        return f"http://{host}:{ports[0]}"
+    raise ScanRefused("cannot derive an HTTP URL: no approved ports")
+
+
+def derive_plain_http_url(address: str, approved_ports: list[int] | None = None) -> str | None:
+    """Return the approved plain-HTTP endpoint URL, or None if no plain port is approved."""
+    ports = _approved_port_set(approved_ports)
+    host = derive_host(address)
+    for p in PLAIN_HTTP_PORTS:
+        if p in ports:
+            return f"http://{host}:{p}"
+    return None
 
 
 def _completed_scans_before(db: Session, target_id: int, scan_id: int) -> list[models.Scan]:
@@ -163,18 +235,20 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
 
     host = derive_host(target.address)
     scope = set(target.approved_scope or [])
-    ports = [int(p) for p in (target.approved_ports or [])]
+    ports = _approved_port_set(target.approved_ports)
+    base_url = derive_http_url(target.address, ports)
+    plain_url = derive_plain_http_url(target.address, ports)
     context = {
         "target": target.name,
         "hostname": host,
         "approved_ports": ports,
-        "url": derive_http_url(target.address, ports),
+        "url": base_url,
+        "plain_url": plain_url,
     }
 
     observations: dict = {}
     errors: list[str] = []
     attempted = 0
-    succeeded = 0
 
     def _delay() -> None:
         if attempted > 0:
@@ -185,7 +259,6 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
         attempted += 1
         try:
             observations["nmap"] = tools.run_nmap(host, ports)
-            succeeded += 1
         except Exception as exc:  # ToolError or unexpected failure
             errors.append(f"nmap: {exc}")
 
@@ -195,19 +268,26 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
         try:
             tls_port = derive_tls_port(target.address, ports)
             observations["testssl"] = tools.run_testssl(host, tls_port)
-            succeeded += 1
         except Exception as exc:
             errors.append(f"testssl: {exc}")
 
     if "http_api" in scope:
-        url = context["url"]
+        # Secure/base probe for API checks (and discovery target).
         _delay()
         attempted += 1
         try:
-            observations["httpx"] = tools.run_httpx(url)
-            succeeded += 1
+            observations["httpx"] = tools.run_httpx(base_url)
         except Exception as exc:
             errors.append(f"httpx: {exc}")
+
+        # Plain-HTTP probe for the http-plain check, only when a plain approved port exists.
+        if plain_url:
+            _delay()
+            attempted += 1
+            try:
+                observations["httpx_plain"] = tools.run_httpx(plain_url)
+            except Exception as exc:
+                errors.append(f"httpx_plain: {exc}")
 
         if getattr(target, "discovery_enabled", False):
             wordlist = getattr(target, "discovery_wordlist", None)
@@ -215,8 +295,7 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
                 _delay()
                 attempted += 1
                 try:
-                    observations["gobuster"] = tools.run_gobuster(url, wordlist)
-                    succeeded += 1
+                    observations["gobuster"] = tools.run_gobuster(base_url, wordlist)
                 except Exception as exc:
                     errors.append(f"gobuster: {exc}")
 
@@ -244,12 +323,18 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
     _record_drift(db, target, scan)
 
     scan.completed_at = datetime.now(timezone.utc)
+    usable = bool(observations)
     if errors:
         scan.error = "; ".join(errors)
-        scan.status = "failed" if succeeded == 0 else "completed_with_errors"
+        # A run that produced no usable observations is not a clean scan.
+        scan.status = "completed_with_errors" if usable else "failed"
     else:
-        scan.status = "completed"
-        scan.error = None
+        if not usable and attempted > 0:
+            scan.status = "failed"
+            scan.error = "assessment produced no observations"
+        else:
+            scan.status = "completed"
+            scan.error = None
 
     db.commit()
     db.refresh(scan)

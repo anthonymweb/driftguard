@@ -143,22 +143,23 @@ class PortOpenTests(unittest.TestCase):
 
 class HttpPlainTests(unittest.TestCase):
     def test_detects_plain_http_without_https_redirect(self):
-        obs = {"httpx": {"status_code": 200, "scheme": "http", "location": None, "final_url": "http://svc:8080/"}}
-        items = http_plain.run(obs, ctx(target="democommerce", url="http://democommerce:8080"))
+        obs = {"httpx_plain": {"status_code": 200, "scheme": "http", "location": None, "final_url": "http://svc:8080/"}}
+        items = http_plain.run(obs, ctx(target="democommerce", url="https://democommerce:8443"))
         self.assertEqual(len(items), 1)
         ev = items[0]
         self.assertEqual(ev["fingerprint"], "democommerce/Network/http-plain")
         self.assertEqual(ev["category"], "Network")
         self.assertEqual(ev["severity"], "medium")
         self.assertEqual(ev["title"], "Plain HTTP without redirect to HTTPS")
-        self.assertEqual(ev["resource"], "http://democommerce:8080")
+        self.assertEqual(ev["resource"], "http://svc:8080/")
         self.assertEqual(ev["details"]["status_code"], 200)
 
     def test_no_finding_when_redirects_to_https(self):
-        obs = {"httpx": {"status_code": 301, "scheme": "http", "location": "https://svc/", "final_url": "http://svc/"}}
-        self.assertEqual(http_plain.run(obs, ctx(url="http://svc/")), [])
+        obs = {"httpx_plain": {"status_code": 301, "scheme": "http", "location": "https://svc/", "final_url": "http://svc/"}}
+        self.assertEqual(http_plain.run(obs, ctx(url="https://svc/")), [])
 
-    def test_no_finding_when_already_https(self):
+    def test_no_finding_when_secure_probe_only(self):
+        # The secure (base) probe must not trigger http-plain.
         obs = {"httpx": {"status_code": 200, "scheme": "https", "location": None, "final_url": "https://svc/"}}
         self.assertEqual(http_plain.run(obs, ctx(url="https://svc/")), [])
 

@@ -64,16 +64,17 @@ class DerivationTests(unittest.TestCase):
         self.assertEqual(derive_tls_port("example.test", [8443, 8080]), 8443)
 
     def test_derive_http_url_from_https_url(self):
-        self.assertEqual(derive_http_url("https://example.test:8443"), "https://example.test:8443")
+        self.assertEqual(derive_http_url("https://example.test:8443", [8443, 443]), "https://example.test:8443")
 
     def test_derive_http_url_from_http_url(self):
-        self.assertEqual(derive_http_url("http://example.test:8080"), "http://example.test:8080")
+        self.assertEqual(derive_http_url("http://example.test:8080", [8080]), "http://example.test:8080")
 
     def test_derive_http_url_from_bare_host_uses_http_and_first_web_port(self):
         self.assertEqual(derive_http_url("example.test", [8443, 8080]), "http://example.test:8080")
 
-    def test_derive_http_url_from_bare_host_defaults_to_80(self):
-        self.assertEqual(derive_http_url("example.test", []), "http://example.test")
+    def test_derive_http_url_from_bare_host_with_no_approved_ports_is_refused(self):
+        with self.assertRaises(ScanRefused):
+            derive_http_url("example.test", [])
 
 
 class EngineRefusalTests(_DBTestCase):
@@ -141,6 +142,28 @@ class EngineRefusalTests(_DBTestCase):
         self.assertEqual(list(db.scalars(select(models.Scan))), [])
         db.close()
 
+    @mock.patch("driftguard.scanner.engine.tools.run_gobuster")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_refuses_when_address_port_not_approved_and_invokes_no_tools(
+        self, m_nmap, m_testssl, m_httpx, m_gobuster
+    ):
+        target_id = self._target(address="https://example.test:9999", approved_ports=[443, 8443])
+        db = self.db()
+        target = db.get(models.Target, target_id)
+        with self.assertRaises(ScanRefused) as ctx:
+            assess_target(db, target)
+        msg = str(ctx.exception)
+        self.assertIn("9999", msg)
+        self.assertIn("approved", msg.lower())
+        self.assertEqual(list(db.scalars(select(models.Scan))), [])
+        m_nmap.assert_not_called()
+        m_testssl.assert_not_called()
+        m_httpx.assert_not_called()
+        m_gobuster.assert_not_called()
+        db.close()
+
 
 class EngineAssessmentTests(_DBTestCase):
     def _make_target(self, db, **overrides):
@@ -177,14 +200,22 @@ class EngineAssessmentTests(_DBTestCase):
         target = self._make_target(db)
         m_nmap.return_value = {"open_ports": [{"port": 8081, "state": "open", "service": "http", "version": ""}]}
         m_testssl.return_value = {"protocols": {"TLS1": True, "TLS1_1": False}, "cipher_issues": [], "cert": {"cert_commonName": "svc.test"}}
-        m_httpx.return_value = {"status_code": 200, "scheme": "https", "location": None, "final_url": "https://svc.test:8443"}
+
+        def httpx_side(url, **kwargs):
+            if str(url).startswith("https://"):
+                return {"status_code": 200, "scheme": "https", "location": None, "final_url": str(url)}
+            return {"status_code": 301, "scheme": "http", "location": "https://svc.test:8443/", "final_url": str(url)}
+
+        m_httpx.side_effect = httpx_side
         m_gobuster.return_value = {"found": []}
 
         scan = assess_target(db, target)
 
         m_nmap.assert_called_once_with("svc.test", [8443, 8080])
         m_testssl.assert_called_once_with("svc.test", 8443)
-        m_httpx.assert_called_once()
+        # secure/base probe and plain-HTTP probe (8080 is an approved plain port)
+        self.assertEqual(m_httpx.call_args_list[0].args[0], "https://svc.test:8443")
+        self.assertEqual(m_httpx.call_args_list[1].args[0], "http://svc.test:8080")
         m_gobuster.assert_not_called()  # discovery off by default
 
         self.assertEqual(scan.status, "completed")
@@ -193,6 +224,7 @@ class EngineAssessmentTests(_DBTestCase):
         fps = {e.fingerprint for e in evidence}
         self.assertIn("svc/Network/port-open", fps)
         self.assertIn("svc/TLS/tls-legacy", fps)
+        self.assertNotIn("svc/Network/http-plain", fps)  # plain endpoint redirected to HTTPS
         db.close()
 
     @mock.patch("driftguard.scanner.engine.time.sleep")
@@ -207,15 +239,21 @@ class EngineAssessmentTests(_DBTestCase):
         target = self._make_target(db)
         m_nmap.side_effect = ToolError("nmap boom")
         m_testssl.return_value = {"protocols": {"TLS1": False, "TLS1_1": False, "TLS1_2": True}, "cipher_issues": [], "cert": {"cert_commonName": "svc.test"}}
-        m_httpx.return_value = {"status_code": 200, "scheme": "https", "location": None, "final_url": "https://svc.test:8443"}
+
+        def httpx_side(url, **kwargs):
+            if str(url).startswith("https://"):
+                return {"status_code": 200, "scheme": "https", "location": None, "final_url": str(url)}
+            return {"status_code": 301, "scheme": "http", "location": "https://svc.test:8443/", "final_url": str(url)}
+
+        m_httpx.side_effect = httpx_side
 
         scan = assess_target(db, target)
 
         self.assertEqual(scan.status, "completed_with_errors")
         self.assertIn("nmap", (scan.error or "").lower())
-        # testssl/httpx still ran
+        # testssl/httpx still ran (secure + plain probes)
         m_testssl.assert_called_once()
-        m_httpx.assert_called_once()
+        self.assertEqual(m_httpx.call_count, 2)
         # no evidence items expected from these observations, but scan is not clean
         evidence = list(db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan.id)))
         self.assertEqual(evidence, [])
@@ -239,6 +277,8 @@ class EngineAssessmentTests(_DBTestCase):
 
         self.assertEqual(scan.status, "failed")
         self.assertIsNotNone(scan.error)
+        # secure and plain probes both attempted and failed
+        self.assertGreaterEqual(m_httpx.call_count, 2)
         evidence = list(db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan.id)))
         self.assertEqual(evidence, [])
         db.close()
@@ -302,9 +342,17 @@ class EngineAssessmentTests(_DBTestCase):
     ):
         db = self.db()
         target = self._make_target(db, approved_scope=["http_api"], discovery_enabled=False)
-        m_httpx.return_value = {"status_code": 200, "scheme": "https", "location": None, "final_url": "https://svc.test:8443"}
+
+        def httpx_side(url, **kwargs):
+            if str(url).startswith("https://"):
+                return {"status_code": 200, "scheme": "https", "location": None, "final_url": str(url)}
+            return {"status_code": 301, "scheme": "http", "location": "https://svc.test:8443/", "final_url": str(url)}
+
+        m_httpx.side_effect = httpx_side
         assess_target(db, target)
         m_gobuster.assert_not_called()
+        # base + plain probes
+        self.assertEqual(m_httpx.call_count, 2)
         db.close()
 
     @mock.patch("driftguard.scanner.engine.time.sleep")
@@ -317,12 +365,60 @@ class EngineAssessmentTests(_DBTestCase):
     ):
         db = self.db()
         target = self._make_target(db, approved_scope=["http_api"], discovery_enabled=True, discovery_wordlist="/tmp/wl.txt")
-        m_httpx.return_value = {"status_code": 200, "scheme": "https", "location": None, "final_url": "https://svc.test:8443"}
+
+        def httpx_side(url, **kwargs):
+            if str(url).startswith("https://"):
+                return {"status_code": 200, "scheme": "https", "location": None, "final_url": str(url)}
+            return {"status_code": 301, "scheme": "http", "location": "https://svc.test:8443/", "final_url": str(url)}
+
+        m_httpx.side_effect = httpx_side
         m_gobuster.return_value = {"found": [{"path": "/debug", "status": 200, "size": 10}]}
         scan = assess_target(db, target)
         m_gobuster.assert_called_once_with("https://svc.test:8443", "/tmp/wl.txt")
         fps = {e.fingerprint for e in db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan.id))}
         self.assertIn("svc/API/api-debug", fps)
+        db.close()
+
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_gobuster")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_plain_http_probe_produces_http_plain_evidence(
+        self, m_nmap, m_testssl, m_httpx, m_gobuster, m_sleep
+    ):
+        db = self.db()
+        target = self._make_target(db, approved_scope=["http_api"], approved_ports=[8443, 8080])
+
+        def httpx_side(url, **kwargs):
+            if str(url).startswith("https://"):
+                return {"status_code": 200, "scheme": "https", "location": None, "final_url": str(url)}
+            # plain endpoint serves the app (no redirect to HTTPS)
+            return {"status_code": 200, "scheme": "http", "location": None, "final_url": str(url)}
+
+        m_httpx.side_effect = httpx_side
+        scan = assess_target(db, target)
+        evidence = list(db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan.id)))
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(evidence[0].fingerprint, "svc/Network/http-plain")
+        db.close()
+
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_gobuster")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_no_plain_http_probe_when_no_plain_port_approved(
+        self, m_nmap, m_testssl, m_httpx, m_gobuster, m_sleep
+    ):
+        db = self.db()
+        target = self._make_target(db, approved_scope=["http_api"], approved_ports=[8443])
+        m_httpx.return_value = {"status_code": 200, "scheme": "https", "location": None, "final_url": "https://svc.test:8443"}
+        scan = assess_target(db, target)
+        # only the secure/base probe; no plain-HTTP endpoint is approved
+        m_httpx.assert_called_once_with("https://svc.test:8443")
+        fps = {e.fingerprint for e in db.scalars(select(models.Evidence).where(models.Evidence.scan_id == scan.id))}
+        self.assertNotIn("svc/Network/http-plain", fps)
         db.close()
 
 

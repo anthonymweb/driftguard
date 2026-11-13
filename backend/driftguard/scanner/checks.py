@@ -185,7 +185,7 @@ def _run_port_open(observations: Observation, context: Context) -> list[Evidence
 
 def _run_http_plain(observations: Observation, context: Context) -> list[EvidenceItem]:
     target = str(context.get("target", ""))
-    httpx = observations.get("httpx") or {}
+    httpx = observations.get("httpx_plain") or {}
     if not httpx:
         return []
     scheme = str(httpx.get("scheme") or "")
@@ -196,7 +196,7 @@ def _run_http_plain(observations: Observation, context: Context) -> list[Evidenc
         return []
     if loc.startswith("https://"):
         return []
-    url = str(context.get("url") or httpx.get("final_url") or target)
+    url = str(httpx.get("final_url") or context.get("plain_url") or context.get("url") or target)
     return [
         _ev(
             target,
