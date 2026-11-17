@@ -86,6 +86,9 @@ _SCHEME_RE = re.compile(r"(?i)\b[a-z][a-z0-9+.\-]*://")
 _HOST_RE = re.compile(r"(?i)(?:\*\.)?(?:[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?\.)+[a-z0-9\-]{2,}\b|(?<![A-Za-z0-9])localhost(?![A-Za-z0-9])")
 # Reference / national-id like identifiers and explicit seeded forms
 _ID_RE = re.compile(r"\b(?:TEST-\d{3,}|CMTEST\d{5,}|[A-Z]{2,}\d{6,}[A-Z0-9]*)\b")
+# Person names (Western-style, with optional middle initial, titles, suffixes)
+# Matches: "John Smith", "Jane Doe", "John A. Smith", "Dr. Jane Smith, PhD", "Mr. John Smith Jr."
+_NAME_RE = re.compile(r"\b(?:[A-Z][a-z]{1,2}\.\s+)?(?:Dr\.|Mr\.|Mrs\.|Ms\.|Prof\.)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+[A-Z]\.)?(?:\s+(?:Jr\.|Sr\.|II|III|IV))?\b|\b[A-Z][a-z]+(?:\s+[A-Z]\.)?\s+[A-Z][a-z]+(?:\s+(?:Jr\.|Sr\.|II|III|IV))?\b")
 # Obvious API key / secret tokens
 _KEY_RE = re.compile(r"(?i)\b(?:lab-demo-key|[A-Za-z0-9_\-]*api[_\-]?key[A-Za-z0-9_\-]*|sk_[A-Za-z0-9]{8,})\b")
 
@@ -118,6 +121,8 @@ def _sensitive_kind(value: str) -> str | None:
         return "ID"
     if _HOST_RE.search(value):
         return "HOST"
+    if _NAME_RE.search(value):
+        return "NAME"
     # generic long secret-looking assignments inside strings
     if "postgres://" in value.lower() or "password" in value.lower() and "@" in value:
         return "URL"
