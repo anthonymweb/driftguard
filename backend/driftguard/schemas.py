@@ -117,3 +117,31 @@ class EvidenceRead(BaseModel):
     resource: str
     details: dict
     observed_at: datetime
+
+
+class TokenRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    role: str
+    username: str
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9._-]+$")
+    # Hashed at rest; the minimum keeps a token worth issuing in the first place.
+    password: str = Field(min_length=8, max_length=200)
+    role: Literal["viewer", "operator", "admin"]
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    role: str
+    created_at: datetime

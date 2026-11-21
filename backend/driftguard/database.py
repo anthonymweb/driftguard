@@ -1,11 +1,13 @@
 """Database setup. SQLite is the default to keep local research reproducible."""
 import os
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
-DATABASE_URL = os.getenv("DRIFTGUARD_DATABASE_URL", "sqlite:///./driftguard.db")
+DEFAULT_DB_PATH = Path(__file__).resolve().parents[2] / "driftguard.db"
+DATABASE_URL = os.getenv("DRIFTGUARD_DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
 engine_options = {"connect_args": {"check_same_thread": False}} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, future=True, **engine_options)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)

@@ -105,5 +105,55 @@ class ApiAuthorizationTests(unittest.TestCase):
         self.assertEqual(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:5173")
 
 
+class ReadinessTests(unittest.TestCase):
+    """Liveness (/health) and readiness (/ready) are different questions."""
+
+    def tearDown(self):
+        app.dependency_overrides.clear()
+
+    @staticmethod
+    def _client(bound_engine):
+        factory = sessionmaker(bind=bound_engine, expire_on_commit=False)
+
+        def override_db():
+            db = factory()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = override_db
+        return TestClient(app)
+
+    def test_ready_reports_a_working_database(self):
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        client = self._client(engine)
+        response = client.get("/ready")
+        client.close()
+        engine.dispose()
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["status"], "ready")
+        self.assertEqual(body["database"], "ok")
+
+    def test_ready_returns_503_when_the_database_does_not_answer(self):
+        # A path whose parent directory does not exist cannot be opened, which is
+        # what a lost database looks like from the service's point of view.
+        engine = create_engine("sqlite:////tmp/opencode/no-such-dir-for-driftguard/x.db")
+        client = self._client(engine)
+        response = client.get("/ready")
+        client.close()
+        engine.dispose()
+        self.assertEqual(response.status_code, 503)
+        body = response.json()
+        self.assertEqual(body["status"], "not_ready")
+        self.assertEqual(body["database"], "unavailable")
+
+
 if __name__ == "__main__":
     unittest.main()
