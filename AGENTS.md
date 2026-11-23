@@ -4,14 +4,17 @@ Read this first, then [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).
 
 ## What this repository is
 
-DriftGuard is a **comparator**, not a scanner product. It observes an explicitly
-authorised target with real tools, stores append-only evidence, and classifies the
-change between consecutive observations with frozen rules:
+DriftGuard is a **drift detector** whose core operation is comparison — not a scanner
+product. It observes an explicitly authorised target with real tools, stores append-only
+evidence, and classifies the change between consecutive observations with frozen rules:
 
 `BASELINE` · `NEW` · `PERSISTENT` · `FIXED` · `RECURRING` · `NO DRIFT`
 
 The `lab/` folder is the controlled fixture that supplies ground truth. It makes the
-comparator measurable; it is not the product. The product is `backend/` + `frontend/`.
+detector measurable; it is not the product. The product is `backend/` + `frontend/`.
+
+"Comparator" is an internal design metaphor only. Never use it in user-facing copy or
+the product pitch; say **drift detection** and **what changed between scans**.
 
 ## Non-negotiable rules
 
@@ -35,7 +38,7 @@ comparator measurable; it is not the product. The product is `backend/` + `front
 | Path | What it is |
 |---|---|
 | `backend/` | FastAPI service, scanning engine, drift classifier, redaction, tests |
-| `frontend/` | React + Vite dashboard (currently being redesigned as a comparator console) |
+| `frontend/` | React + Vite dashboard (being redesigned as the Drift console) |
 | `lab/` | Five controlled targets, reversible drift scenarios, ground-truth log |
 | `docs/superpowers/specs/` | Design documents (source of truth for intent) |
 | `docs/superpowers/plans/` | Implementation plans |

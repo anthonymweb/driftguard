@@ -18,10 +18,13 @@ Update it at the end of every work session.
 
 ## What the system is
 
-DriftGuard compares observations of an authorised target over time and classifies the
-change with frozen labels: `BASELINE`, `NEW`, `PERSISTENT`, `FIXED`, `RECURRING`,
-`NO DRIFT`. The lab is the controlled fixture that supplies ground truth; the product is
-the backend plus the dashboard.
+DriftGuard is a **drift detector** whose core operation is comparison: it observes an
+authorised target over time and classifies the change with frozen labels: `BASELINE`,
+`NEW`, `PERSISTENT`, `FIXED`, `RECURRING`, `NO DRIFT`. The lab is the controlled fixture
+that supplies ground truth; the product is the backend plus the dashboard.
+
+"Comparator" is an internal design metaphor only. Never use it in user-facing copy or the
+product pitch; say **drift detection** and **what changed between scans**.
 
 ## Completed
 
@@ -46,25 +49,16 @@ the backend plus the dashboard.
   `/api/targets` (create/list/get), `/api/targets/{id}/scans` (create/list),
   `/api/scans/{id}/evidence`, `/api/scans/{id}/evidence/redacted`.
 
-## Current focus — comparator console redesign
+## Current focus — Drift console redesign
 
-The owner chose **approach 1: a comparator console**. The interface is organised around
-one question: *what changed since the previous authorised observation?* It is not a
-generic SOC dashboard.
+The owner chose **approach 1: a comparison-first console**, now called the **Drift
+console** in product language. The interface is organised around one question: *what
+changed since the previous authorised observation?* It is not a generic SOC dashboard.
 
-Design decisions already made by the owner:
-
-- The frontend is being redesigned, not merely restyled.
-- The framing is **comparator**, not scanner.
-- Real evidence only; no seeded or simulated findings.
-- Visual direction is delegated to the designer/agent; see the design document.
-
-Binding constraint found during recon: the comparator data exists in the database but is
-**not exposed by the API**. `DriftEvent` rows, evaluation results, and remediations have
-no read endpoints. The redesign therefore includes small, additive read endpoints.
-
-The design document and implementation plan for this work are the next artifacts. Until
-they are committed, the frontend is still the old dashboard.
+- Design document: `docs/superpowers/specs/2026-11-24-drift-console-design.md`
+  (revised after builder check; awaiting owner approval).
+- The implementation plan has not been written yet. Until it is, the frontend is still
+  the old dashboard.
 
 ## Paused / not current work
 
@@ -87,12 +81,13 @@ they are committed, the frontend is still the old dashboard.
 
 ## Decisions the next agent must not reopen
 
-1. DriftGuard is a comparator. The lab is a fixture, not a demo.
+1. DriftGuard is a drift detector; comparison is its core operation. The lab is a
+   fixture, not a demo.
 2. Evidence only; no fabricated findings.
 3. Classification rules are frozen.
 4. Every scan is gated by an attributable authorisation record and approved scope.
 5. Redaction happens before any export or AI call.
-6. The comparator console (approach 1) is the chosen frontend direction.
+6. The comparison-first Drift console (approach 1) is the chosen frontend direction.
 
 ## Verify before claiming completion
 
