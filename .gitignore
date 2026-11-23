@@ -13,3 +13,7 @@ nginx/conf.d/*.conf
 **/nginx/conf.d/*.conf
 .superpowers/
 .worktrees/
+
+# Local-only secrets and damaged-disk recovery artifacts
+.driftguard_redaction_secret
+lab/democommerce.corrupt-pre-reboot/
