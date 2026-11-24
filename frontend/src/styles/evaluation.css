@@ -1,0 +1,15 @@
+.evaluation-page { max-width: 960px; margin: 0 auto; padding: var(--space-6) var(--space-5); }
+.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-5); margin: var(--space-6) 0; }
+.readout { border-top: 2px solid var(--ink); padding-top: var(--space-3); }
+.readout-value { font-size: var(--step-4); font-weight: 500; margin: var(--space-2) 0 0; }
+.readout-fraction { color: var(--ink-2); margin: 0; }
+.area-table { width: 100%; border-collapse: collapse; margin-top: var(--space-5); }
+.area-table caption { text-align: left; padding-bottom: var(--space-2); font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.area-table th, .area-table td { border-bottom: 1px solid var(--rule); padding: var(--space-2); text-align: right; }
+.area-table th:first-child, .area-table td:first-child { text-align: left; }
+.area-table thead th { border-bottom: 1px solid var(--ink); font-weight: 500; }
+.area-table tfoot td, .area-table tfoot th { border-top: 1px solid var(--ink); border-bottom: 0; }
+.caveat { margin-top: var(--space-6); padding: var(--space-4); border-left: 2px solid var(--ink); background: var(--sheet); max-width: 70ch; }
+.unavailable { margin-top: var(--space-6); padding: var(--space-5); border-top: 2px solid var(--pending); background: var(--sheet); }
+.duplicate-list { font-family: var(--font-mono); }
+.unmeasured { margin-top: var(--space-5); padding: var(--space-4); border-top: 1px solid var(--rule); }

@@ -1,0 +1,40 @@
+/* Target styles are added by Task 8. */
+
+.register-sheet {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 2 * var(--space-5));
+  overflow: auto;
+  padding: var(--space-6);
+  border-top: 2px solid var(--ink);
+}
+.register-head { display: flex; align-items: start; justify-content: space-between; gap: var(--space-4); }
+.register-sheet h1 { font-size: var(--step-2); margin: var(--space-1) 0 var(--space-4); }
+.register-sheet fieldset { border: 0; border-top: 1px solid var(--rule); margin: 0; padding: var(--space-4) 0; display: grid; gap: var(--space-2); }
+.register-sheet legend { padding-top: var(--space-3); }
+.register-sheet label { display: flex; align-items: center; gap: var(--space-2); }
+.register-sheet fieldset > label:has(input:not([type='checkbox']):not([type='radio'])) { display: grid; gap: var(--space-1); }
+.register-sheet input:not([type='checkbox']):not([type='radio']),
+.register-sheet select { width: 100%; padding: 8px 10px; border: 1px solid var(--ink); background: var(--sheet); }
+.register-actions { display: flex; gap: var(--space-3); padding-top: var(--space-4); border-top: 2px solid var(--ink); }
+.field-error { color: var(--risk); font-size: var(--step--1); }
+
+.targets-page { max-width: 1180px; margin: 0 auto; padding: var(--space-6) var(--space-5); }
+.page-head { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); padding-bottom: var(--space-4); border-bottom: 2px solid var(--ink); }
+.page-head h1 { font-size: var(--step-3); margin: var(--space-1) 0; }
+.lede { max-width: 62ch; color: var(--ink-2); margin: 0; }
+
+.roster { list-style: none; margin: var(--space-5) 0 0; padding: 0; border-top: 1px solid var(--rule); }
+.roster-row { display: grid; grid-template-columns: 1.2fr 1fr 0.8fr 1fr auto; gap: var(--space-4); align-items: start; padding: var(--space-4) 0; border-bottom: 1px solid var(--rule); }
+.roster-name { border: 0; background: none; padding: 0; font-size: var(--step-1); font-weight: 600; text-align: left; }
+.roster-name:hover { color: var(--signal); }
+.roster-address { display: block; color: var(--ink-2); font-size: var(--step--1); margin-top: var(--space-1); }
+.roster-field { display: grid; gap: 2px; }
+.roster-actions { display: grid; gap: var(--space-2); justify-items: start; }
+.refusal { color: var(--pending); font-size: var(--step--1); margin: 0; max-width: 30ch; }
+
+.stamp { border: 1px solid var(--ink); padding: var(--space-3); background: var(--sheet); }
+.stamp.is-pending { border-color: var(--pending); }
+.stamp[data-compact] { border-width: 1px; padding: var(--space-2); }
+.stamp-state { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.08em; margin: var(--space-1) 0; }
+.stamp.is-pending .stamp-state { color: var(--pending); }
+.stamp-line { margin: 2px 0; }

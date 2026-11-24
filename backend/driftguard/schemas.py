@@ -76,6 +76,14 @@ class TargetCreate(BaseModel):
         return self
 
 
+class ScanSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    status: str
+    started_at: datetime
+    completed_at: datetime | None
+
+
 class TargetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -92,6 +100,9 @@ class TargetRead(BaseModel):
     discovery_wordlist: str | None
     status: str
     created_at: datetime
+    last_scan: ScanSummary | None = None
+    scannable: bool = False
+    refusal_reasons: list[str] = Field(default_factory=list)
 
 
 class ScanRead(BaseModel):
@@ -145,3 +156,66 @@ class UserRead(BaseModel):
     username: str
     role: str
     created_at: datetime
+
+
+class DriftEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    scan_id: int
+    evidence_fingerprint: str
+    classification: str
+    recorded_at: datetime
+
+
+class FingerprintMeta(BaseModel):
+    title: str
+    category: str
+    severity: str
+    resource: str
+
+
+class DriftCounts(BaseModel):
+    NEW: int = 0
+    PERSISTENT: int = 0
+    FIXED: int = 0
+    RECURRING: int = 0
+
+
+class DriftSummary(BaseModel):
+    state: Literal["BASELINE", "NO DRIFT", "CHANGED", "INCOMPLETE"]
+    counts: DriftCounts = Field(default_factory=DriftCounts)
+
+
+class HistoryScan(BaseModel):
+    scan: ScanRead
+    comparable: bool
+    evidence: list[EvidenceRead] = Field(default_factory=list)
+    drift: list[DriftEventRead] = Field(default_factory=list)
+    summary: DriftSummary
+
+
+class TargetHistory(BaseModel):
+    target: TargetRead
+    scans: list[HistoryScan] = Field(default_factory=list)
+    fingerprints: dict[str, FingerprintMeta] = Field(default_factory=dict)
+
+
+class StatsRead(BaseModel):
+    targets: int
+    scans: int
+    evidence: int
+    drift_events: int
+    auth_mode: str
+    redaction: dict
+
+
+class EvaluationRead(BaseModel):
+    available: bool
+    reason: str | None = None
+    duplicates: list[str] = Field(default_factory=list)
+    generated_at: datetime | None = None
+    overall: dict | None = None
+    per_area: dict | None = None
+    per_target: dict | None = None
+    unmeasured: dict | None = None
+    scan_labels: list[str] | None = None

@@ -421,6 +421,82 @@ class EngineAssessmentTests(_DBTestCase):
         self.assertNotIn("svc/Network/http-plain", fps)
         db.close()
 
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_failed_scan_writes_no_fixed_drift(self, m_nmap, m_testssl, m_httpx, m_sleep):
+        from driftguard.scanner.tools import ToolError
+        db = self.db()
+        target = self._make_target(db, approved_scope=["network"], approved_ports=[8443])
+        previous = models.Scan(target_id=target.id, status="completed")
+        db.add(previous)
+        db.flush()
+        db.add(models.Evidence(scan_id=previous.id, fingerprint="svc/Network/port-open",
+                               category="Network", title="Unexpected open port",
+                               severity="High", resource="8081", details={}))
+        db.commit()
+        m_nmap.side_effect = ToolError("nmap boom")
+
+        scan = assess_target(db, target)
+
+        self.assertEqual(scan.status, "failed")
+        events = list(db.scalars(select(models.DriftEvent).where(models.DriftEvent.scan_id == scan.id)))
+        self.assertEqual(events, [])
+        db.close()
+
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_completed_with_errors_writes_no_drift(self, m_nmap, m_testssl, m_httpx, m_sleep):
+        from driftguard.scanner.tools import ToolError
+        db = self.db()
+        target = self._make_target(db, approved_scope=["network", "http_api"], approved_ports=[8443])
+        previous = models.Scan(target_id=target.id, status="completed")
+        db.add(previous)
+        db.flush()
+        db.add(models.Evidence(scan_id=previous.id, fingerprint="svc/Network/port-open",
+                               category="Network", title="Unexpected open port",
+                               severity="High", resource="8081", details={}))
+        db.commit()
+        m_nmap.side_effect = ToolError("nmap boom")
+        m_httpx.return_value = {"status_code": 200, "scheme": "https", "location": None,
+                                "final_url": "https://svc.test:8443"}
+
+        scan = assess_target(db, target)
+
+        self.assertEqual(scan.status, "completed_with_errors")
+        events = list(db.scalars(select(models.DriftEvent).where(models.DriftEvent.scan_id == scan.id)))
+        self.assertEqual(events, [])
+        db.close()
+
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_partial_scan_is_not_a_comparison_base(self, m_nmap, m_testssl, m_httpx, m_sleep):
+        db = self.db()
+        target = self._make_target(db, approved_scope=["network"], approved_ports=[8443])
+        clean = models.Scan(target_id=target.id, status="completed")
+        partial = models.Scan(target_id=target.id, status="completed_with_errors")
+        db.add_all([clean, partial])
+        db.flush()
+        db.add(models.Evidence(scan_id=partial.id, fingerprint="svc/Network/port-open",
+                               category="Network", title="Unexpected open port",
+                               severity="High", resource="8081", details={}))
+        db.commit()
+        m_nmap.return_value = {"open_ports": []}
+
+        scan = assess_target(db, target)
+
+        # The next completed scan with no evidence must compare against `clean`
+        # (empty), not `partial`; otherwise port-open would be reported FIXED.
+        self.assertEqual(scan.status, "completed")
+        events = list(db.scalars(select(models.DriftEvent).where(models.DriftEvent.scan_id == scan.id)))
+        self.assertEqual(events, [])
+        db.close()
+
 
 class ApiScanEndpointTests(unittest.TestCase):
     def setUp(self):

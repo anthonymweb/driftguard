@@ -9,7 +9,7 @@ This repository holds two things:
 | | |
 |---|---|
 | **`backend/`** | the system — the scanning engine and its API |
-| **`frontend/`** | the dashboard that presents what the engine found |
+| **`frontend/`** | the Drift console — what changed between scans |
 | **`lab/`** | a controlled test domain: five target applications whose security drift can be switched on and off, with an authoritative ground-truth log |
 
 The lab is what makes the system measurable. Every finding the engine produces is scored
@@ -66,9 +66,17 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/uvicorn driftguard.main:app --host 127.0.0.1 --port 8000
 ```
 
+```bash
+cd frontend
+npm install
+npm run dev        # Drift console on 127.0.0.1:5173
+npm test
+npm run build
+```
+
 The API is the system's interface. It exposes the target registry, the scans it has run,
 the evidence each scan produced, the drift classification between scans, and
-remediations. The dashboard in `frontend/` consumes it.
+remediations. The Drift console in `frontend/` consumes it.
 
 **Nothing is scanned that has not been explicitly authorized.** A target must be active,
 carry an `authorized` status and have an approved scope before the engine will assess

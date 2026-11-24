@@ -1,0 +1,33 @@
+:root {
+  --paper: #ECEAE3;
+  --sheet: #F5F3ED;
+  --ink: #15181A;
+  --ink-2: #565B5B;
+  --rule: #C7C3B7;
+  --signal: #1E45C8;
+  --risk: #A93627;
+  --verified: #2C6A4F;
+  --pending: #8A600F;
+
+  --font-ui: 'Chivo Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Chivo Mono Variable', ui-monospace, monospace;
+
+  --step--1: 0.6875rem;
+  --step-0: 0.875rem;
+  --step-1: 1rem;
+  --step-2: 1.5rem;
+  --step-3: 1.75rem;
+  --step-4: 2.5rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --index-width: 236px;
+  --top-height: 64px;
+  --row-height: 38px;
+}
