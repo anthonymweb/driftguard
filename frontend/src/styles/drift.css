@@ -1,1 +1,92 @@
-/* Drift sheet styles are added by Task 9. */
+.thread-wrap { overflow-x: auto; border-top: 1px solid var(--rule); }
+
+.thread-grid {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--step-0);
+}
+
+.thread-grid th,
+.thread-grid td { border-bottom: 1px solid var(--rule); }
+
+.axis-finding { width: 220px; text-align: left; padding: var(--space-2) 0; }
+.axis-scan {
+  width: 92px;
+  padding: var(--space-2) 4px;
+  border-left: 1px solid var(--rule);
+  vertical-align: bottom;
+  font-weight: 400;
+}
+.axis-scan span { display: block; }
+.axis-id { font-size: var(--step-0); color: var(--ink); }
+.axis-date { font-size: 10px; color: var(--ink-2); }
+.axis-state { font-size: 10px; letter-spacing: 0.06em; margin-top: 2px; }
+.axis-scan.kind-baseline { background: var(--sheet); }
+.axis-scan.kind-incomplete {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(199, 195, 183, 0.55) 6px 7px);
+}
+.axis-scan.kind-pending { border-bottom: 1px dashed var(--pending); }
+.axis-current { width: 128px; text-align: right; padding-right: var(--space-3); }
+
+.thread-group th {
+  padding: var(--space-3) 0 var(--space-1);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--ink);
+}
+
+.thread-row { height: var(--row-height); }
+.thread-row:hover,
+.thread-row:focus-visible,
+.thread-row.is-selected { background: var(--sheet); }
+.thread-row:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
+
+.thread-title { text-align: left; padding: 4px var(--space-2) 4px 0; font-weight: 400; }
+.thread-title > span { display: block; }
+.thread-resource { color: var(--ink-2); font-size: var(--step--1); }
+
+.thread-cell { position: relative; height: var(--row-height); padding: 0; text-align: center; }
+.thread-cell.kind-incomplete {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(199, 195, 183, 0.55) 6px 7px);
+}
+.thread-cell.kind-incomplete::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px dotted var(--ink-2);
+}
+.thread-cell.kind-pending { border-left: 1px dashed var(--pending); }
+
+.thread-line {
+  position: absolute;
+  top: 50%;
+  height: 1px;
+  background: var(--ink);
+}
+.thread-line.line-left { left: 0; width: 50%; }
+.thread-line.line-right { right: 0; width: 50%; }
+
+.mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.mark-baseline { width: 7px; height: 7px; background: var(--ink); }
+.mark-new { width: 8px; height: 8px; background: var(--signal); }
+.mark-recurring { width: 8px; height: 8px; background: var(--signal); transform: translate(-50%, -50%) rotate(45deg); }
+.mark-fixed { width: 9px; height: 9px; border: 1.5px solid var(--verified); border-radius: 50%; background: var(--paper); }
+.mark-absent { width: 12px; height: 1px; background: var(--rule); }
+
+.thread-current { text-align: right; padding-right: var(--space-3); font-size: var(--step--1); }
+.thread-current .severity { display: block; color: var(--risk); }
+.current-fixed { color: var(--verified); }
+.current-new,
+.current-recurring { color: var(--signal); }
+
+.difference-line { margin: var(--space-4) 0; font-family: var(--font-mono); font-size: var(--step-1); }
+.difference-changed { color: var(--signal); }
+.difference-no-drift { color: var(--verified); }
+.difference-baseline { color: var(--ink-2); }
