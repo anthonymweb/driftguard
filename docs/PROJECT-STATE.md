@@ -6,6 +6,8 @@ Update it at the end of every work session.
 ## Working copy and backup status
 
 - The authoritative copy is **GitHub `origin/main`** (`anthonymweb/driftguard`).
+- The Drift console work was merged to `main` and pushed to `origin/main` on
+  2026-11-24 after the merged tree passed the full backend and frontend suites.
 - The original working volume `/mnt/data` (sda6) was mounted **read-only** with
   `norecovery` on 2026-11-24 because the disk is degraded. It remains readable and is
   not being written to.
