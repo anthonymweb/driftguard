@@ -56,9 +56,18 @@ console** in product language. The interface is organised around one question: *
 changed since the previous authorised observation?* It is not a generic SOC dashboard.
 
 - Design document: `docs/superpowers/specs/2026-11-24-drift-console-design.md`
-  (revised after builder check; awaiting owner approval).
-- The implementation plan has not been written yet. Until it is, the frontend is still
-  the old dashboard.
+  (**approved by the owner on 2026-11-24** after a builder-check revision).
+- Two implementation plans are written and un-executed:
+  - `docs/superpowers/plans/2026-11-24-drift-read-api.md` — 5 backend tasks (scannable
+    fields on `TargetRead`, completed-scan-only comparison, `GET
+    /api/targets/{id}/history`, `GET /api/stats`, `GET /api/evaluation`).
+  - `docs/superpowers/plans/2026-11-24-drift-console-ui.md` — 17 frontend tasks
+    (tooling → pure modules → components → pages → wiring → verification).
+- Neither plan has been executed. Until they are, the frontend is still the old
+  dashboard and the drift data is still not reachable over HTTP.
+- Execution order is **backend plan first**, then frontend plan, each task's tests
+  passing before the next. The next agent must confirm with the owner whether to run
+  inline (`executing-plans`) or with subagents (`subagent-driven-development`).
 
 ## Paused / not current work
 
@@ -93,6 +102,7 @@ changed since the previous authorised observation?* It is not a generic SOC dash
 
 ```bash
 cd backend && .venv/bin/python -m unittest discover -s tests
+cd frontend && npm test
 cd frontend && npm run build
 ```
 
