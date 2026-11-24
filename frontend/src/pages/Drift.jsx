@@ -7,15 +7,18 @@ import {
   EmptySheet, PendingScanPanel, SheetError, SheetLoading,
 } from '../components/StateBlocks';
 import { TargetIndex } from '../components/TargetIndex';
+import { ThreadCards } from '../components/ThreadCards';
 import { ThreadGrid } from '../components/ThreadGrid';
 import { buildThreadModel } from '../lib/threads';
 import { useHistory } from '../state/useHistory';
+import { useMediaQuery } from '../state/useMediaQuery';
 
 export function Drift({
   client, targets, targetsLoading, targetsError, targetId, onSelectTarget,
   onOpenTargets, session,
 }) {
   const { history, loading, error, reload } = useHistory(client, targetId);
+  const narrow = useMediaQuery('(max-width: 900px)');
   const [selectedFingerprint, setSelectedFingerprint] = useState(null);
   const [scanBusy, setScanBusy] = useState(false);
   const [scanMessage, setScanMessage] = useState(null);
@@ -94,7 +97,12 @@ export function Drift({
 
   return (
     <div className="drift-page">
-      <TargetIndex targets={targets} selectedId={targetId} onSelect={onSelectTarget} />
+      <TargetIndex
+        targets={targets}
+        selectedId={targetId}
+        onSelect={onSelectTarget}
+        narrow={narrow}
+      />
 
       <section className="drift-subject">
         <header className="subject">
@@ -156,11 +164,19 @@ export function Drift({
           <>
             <DifferenceLine model={model} />
             <PendingScanPanel scans={model.pendingScans} />
-            <ThreadGrid
-              model={model}
-              selected={selectedFingerprint}
-              onSelect={setSelectedFingerprint}
-            />
+            {narrow ? (
+              <ThreadCards
+                model={model}
+                selected={selectedFingerprint}
+                onSelect={setSelectedFingerprint}
+              />
+            ) : (
+              <ThreadGrid
+                model={model}
+                selected={selectedFingerprint}
+                onSelect={setSelectedFingerprint}
+              />
+            )}
             {selectedRow ? (
               <EvidenceDetail
                 row={selectedRow}

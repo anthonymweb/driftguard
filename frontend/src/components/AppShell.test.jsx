@@ -23,6 +23,17 @@ describe('AppShell', () => {
     expect(screen.getByText('body')).toBeTruthy();
   });
 
+  it('collapses navigation behind a menu at narrow widths', async () => {
+    render(<AppShell route={{ page: 'drift', targetId: 1 }} mode={{ kind: 'local' }} navNarrow>
+      <p>body</p>
+    </AppShell>);
+    const menu = screen.getByRole('button', { name: 'Menu' });
+    expect(menu.getAttribute('aria-expanded')).toBe('false');
+    await userEvent.setup().click(menu);
+    expect(screen.getByRole('button', { name: 'Menu' }).getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('link', { name: 'Drift' })).toBeTruthy();
+  });
+
   it('states local-research mode and offers sign-out only for an operator', async () => {
     const onSignOut = vi.fn();
     const { rerender } = render(

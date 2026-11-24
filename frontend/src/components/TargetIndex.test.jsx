@@ -31,4 +31,13 @@ describe('TargetIndex', () => {
     await userEvent.setup().click(screen.getByRole('link', { name: /civic/ }));
     expect(onSelect).toHaveBeenCalledWith(2);
   });
+
+  it('becomes a target selector on narrow screens', async () => {
+    const onSelect = vi.fn();
+    render(<TargetIndex targets={targets} selectedId={1} onSelect={onSelect} narrow />);
+    const select = screen.getByLabelText('Subject');
+    expect(select.value).toBe('1');
+    await userEvent.setup().selectOptions(select, '2');
+    expect(onSelect).toHaveBeenCalledWith(2);
+  });
 });

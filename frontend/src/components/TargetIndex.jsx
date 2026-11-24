@@ -1,10 +1,24 @@
 import { formatDate } from '../lib/format';
 
-export function TargetIndex({ targets, selectedId, onSelect }) {
+export function TargetIndex({ targets, selectedId, onSelect, narrow = false }) {
   return (
     <nav className="target-index" aria-label="Targets">
       <p className="engraved">TARGETS</p>
-      <ul>
+      {narrow ? (
+        <label className="target-select-label">
+          <span className="engraved">SUBJECT</span>
+          <select
+            aria-label="Subject"
+            value={selectedId ?? ''}
+            onChange={(event) => onSelect(Number(event.target.value))}
+          >
+            {targets.map((target) => (
+              <option key={target.id} value={target.id}>{target.name}</option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <ul>
         {targets.map((target) => {
           const selected = target.id === selectedId;
           return (
@@ -34,7 +48,8 @@ export function TargetIndex({ targets, selectedId, onSelect }) {
             </li>
           );
         })}
-      </ul>
+        </ul>
+      )}
     </nav>
   );
 }
