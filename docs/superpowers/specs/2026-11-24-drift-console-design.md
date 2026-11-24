@@ -1,7 +1,6 @@
 # Drift console — design
 
-**Date:** 2026-11-24 · **Status:** approved 2026-11-24 by the owner; implementation
-pending. **Plans:**
+**Date:** 2026-11-24 · **Status:** approved 2026-11-24 — implemented. **Plans:**
 `docs/superpowers/plans/2026-11-24-drift-read-api.md` (backend, first) and
 `docs/superpowers/plans/2026-11-24-drift-console-ui.md` (frontend, second).
 **Supersedes:** the dashboard direction implicitly assumed by the old `frontend/`

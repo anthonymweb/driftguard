@@ -38,7 +38,7 @@ the product pitch; say **drift detection** and **what changed between scans**.
 | Path | What it is |
 |---|---|
 | `backend/` | FastAPI service, scanning engine, drift classifier, redaction, tests |
-| `frontend/` | React + Vite dashboard (being redesigned as the Drift console) |
+| `frontend/` | React + Vite Drift console — what changed between scans |
 | `lab/` | Five controlled targets, reversible drift scenarios, ground-truth log |
 | `docs/superpowers/specs/` | Design documents (source of truth for intent) |
 | `docs/superpowers/plans/` | Implementation plans |
@@ -48,14 +48,15 @@ the product pitch; say **drift detection** and **what changed between scans**.
 ## Run and test
 
 ```bash
-# Backend tests (127 passing as of 2026-11-24)
+# Backend tests (143 passing as of 2026-11-24)
 cd backend && .venv/bin/python -m unittest discover -s tests
 
 # API
 cd backend && .venv/bin/uvicorn driftguard.main:app --host 127.0.0.1 --port 8000
 
-# Frontend (Vite on 127.0.0.1)
+# Frontend (Drift console on 127.0.0.1:5173)
 cd frontend && npm install && npm run dev
+cd frontend && npm test
 cd frontend && npm run build
 
 # Lab (Docker required; see lab/README.md for the full operator guide)
