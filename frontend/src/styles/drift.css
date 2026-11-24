@@ -90,3 +90,37 @@
 .difference-changed { color: var(--signal); }
 .difference-no-drift { color: var(--verified); }
 .difference-baseline { color: var(--ink-2); }
+
+.detail-rail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--ink);
+}
+.detail-rail h2 { margin: var(--space-1) 0 var(--space-3); font-size: var(--step-2); }
+.detail-rail dl { display: grid; gap: var(--space-2); margin: 0 0 var(--space-4); }
+.detail-rail dt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.detail-rail dd { margin: 0; }
+.detail-local pre {
+  max-height: 260px;
+  overflow: auto;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.detail-note { color: var(--ink-2); font-size: var(--step--1); max-width: 46ch; }
+.detail-status { color: var(--verified); }
