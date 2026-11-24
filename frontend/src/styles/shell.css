@@ -54,9 +54,7 @@
   display: block;
   height: 18px;
   margin: var(--space-3) 0;
-  background: repeating-linear-gradient(
-    90deg, var(--rule) 0 120px, transparent 120px 100%
-  );
+  background: var(--rule);
   opacity: 0.55;
 }
 

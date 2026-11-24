@@ -25,7 +25,8 @@
 .axis-state { font-size: 10px; letter-spacing: 0.06em; margin-top: 2px; }
 .axis-scan.kind-baseline { background: var(--sheet); }
 .axis-scan.kind-incomplete {
-  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(199, 195, 183, 0.55) 6px 7px);
+  background: var(--sheet);
+  border-bottom: 2px dashed var(--ink-2);
 }
 .axis-scan.kind-pending { border-bottom: 1px dashed var(--pending); }
 .axis-current { width: 128px; text-align: right; padding-right: var(--space-3); }
@@ -52,7 +53,9 @@
 
 .thread-cell { position: relative; height: var(--row-height); padding: 0; text-align: center; }
 .thread-cell.kind-incomplete {
-  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(199, 195, 183, 0.55) 6px 7px);
+  background: var(--sheet);
+  border-left: 1px dashed var(--rule);
+  border-right: 1px dashed var(--rule);
 }
 .thread-cell.kind-incomplete::after {
   content: '';
