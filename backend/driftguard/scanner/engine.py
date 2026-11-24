@@ -190,7 +190,7 @@ def _completed_scans_before(db: Session, target_id: int, scan_id: int) -> list[m
         .where(
             models.Scan.target_id == target_id,
             models.Scan.id != scan_id,
-            models.Scan.status.in_(["completed", "completed_with_errors"]),
+            models.Scan.status == "completed",
         )
         .order_by(models.Scan.id.asc())
     )
@@ -329,9 +329,8 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
                 )
             )
 
-    # Classify drift against previous scan (emits no events if there is no prior scan).
-    _record_drift(db, target, scan)
-
+    # Classify drift against the previous completed scan. A scan that did not
+    # complete cleanly is neither a comparison base nor a source of drift events.
     scan.completed_at = datetime.now(timezone.utc)
     usable = bool(observations)
     if errors:
@@ -345,6 +344,9 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
         else:
             scan.status = "completed"
             scan.error = None
+
+    if scan.status == "completed":
+        _record_drift(db, target, scan)
 
     db.commit()
     db.refresh(scan)
