@@ -207,3 +207,15 @@ class StatsRead(BaseModel):
     drift_events: int
     auth_mode: str
     redaction: dict
+
+
+class EvaluationRead(BaseModel):
+    available: bool
+    reason: str | None = None
+    duplicates: list[str] = Field(default_factory=list)
+    generated_at: datetime | None = None
+    overall: dict | None = None
+    per_area: dict | None = None
+    per_target: dict | None = None
+    unmeasured: dict | None = None
+    scan_labels: list[str] | None = None

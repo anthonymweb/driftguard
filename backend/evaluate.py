@@ -245,12 +245,15 @@ def load_engine_evidence(db, target_name_by_id: Mapping[int, str] | None = None)
     """Load evidence grouped by scan label from the database.
 
     Returns (evidence_by_label, engine_only_labels_info).
+    Only completed scans are included.
     """
     from driftguard import models  # local import so module is importable without DB side effects
     scans = list(db.scalars(__import__('sqlalchemy').select(models.Scan).order_by(models.Scan.id)))
     by_label: dict[str, set[str]] = defaultdict(set)
     for scan in scans:
         if not scan.label:
+            continue
+        if scan.status != "completed":
             continue
         rows = list(db.scalars(__import__('sqlalchemy').select(models.Evidence).where(models.Evidence.scan_id == scan.id)))
         for ev in rows:

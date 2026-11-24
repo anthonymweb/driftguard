@@ -2,6 +2,7 @@
 from contextlib import asynccontextmanager
 import os
 import time
+from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,10 +31,12 @@ from .database import Base, engine, get_db, get_session_factory
 from .logconfig import configure_logging
 from .redaction import redact_evidence_payload
 from .scanner.engine import ScanRefused, ensure_scannable, run_scan_in_background
+from .evaluation_service import build_evaluation_report
 from .schemas import (
     DriftCounts,
     DriftSummary,
     EvidenceRead,
+    EvaluationRead,
     FingerprintMeta,
     HistoryScan,
     ScanRead,
@@ -313,6 +316,12 @@ def stats(db: Session = Depends(get_db),
         auth_mode="jwt" if auth_enabled() else "local_research",
         redaction={"enabled": True, "token_map": "local-only"},
     )
+
+
+@app.get("/api/evaluation", response_model=EvaluationRead)
+def evaluation(db: Session = Depends(get_db),
+               principal: Principal = Depends(require_role("viewer"))):
+    return build_evaluation_report(db, Path(__file__).resolve().parents[2])
 
 
 @app.post("/api/targets/{target_id}/scans", response_model=ScanRead, status_code=status.HTTP_201_CREATED)
