@@ -1,1 +1,19 @@
 /* Target styles are added by Task 8. */
+
+.register-sheet {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 2 * var(--space-5));
+  overflow: auto;
+  padding: var(--space-6);
+  border-top: 2px solid var(--ink);
+}
+.register-head { display: flex; align-items: start; justify-content: space-between; gap: var(--space-4); }
+.register-sheet h1 { font-size: var(--step-2); margin: var(--space-1) 0 var(--space-4); }
+.register-sheet fieldset { border: 0; border-top: 1px solid var(--rule); margin: 0; padding: var(--space-4) 0; display: grid; gap: var(--space-2); }
+.register-sheet legend { padding-top: var(--space-3); }
+.register-sheet label { display: flex; align-items: center; gap: var(--space-2); }
+.register-sheet fieldset > label:has(input:not([type='checkbox']):not([type='radio'])) { display: grid; gap: var(--space-1); }
+.register-sheet input:not([type='checkbox']):not([type='radio']),
+.register-sheet select { width: 100%; padding: 8px 10px; border: 1px solid var(--ink); background: var(--sheet); }
+.register-actions { display: flex; gap: var(--space-3); padding-top: var(--space-4); border-top: 2px solid var(--ink); }
+.field-error { color: var(--risk); font-size: var(--step--1); }
