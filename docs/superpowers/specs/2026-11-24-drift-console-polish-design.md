@@ -74,11 +74,13 @@ Add a left sidebar and three new pages. Overview and Scans can be assembled only
 ### Application shell
 
 - Keep the horizontal top strip with `driftguard`, primary nav, mode chip, and sign-out.
-- Make the mode chip truthful:
-  - before service state resolves: `MODE PENDING` or an equivalent neutral label;
-  - `/api/stats` `auth_mode === "local_research"`: `LOCAL RESEARCH`;
-  - JWT mode with a session: `OPERATOR · username` or role as already shown;
-  - JWT mode without a session: `SIGN IN REQUIRED`, not `LOCAL RESEARCH`.
+- Make the mode chip truthful with an explicit state machine:
+  - before service state resolves: `MODE PENDING`;
+  - `/api/stats` succeeds with `auth_mode === "local_research"`: `LOCAL RESEARCH`;
+  - `/api/stats` succeeds in JWT mode with a session: `OPERATOR · username` or role as already shown;
+  - `/api/stats` returns 401 in JWT mode with no session: `SIGN IN REQUIRED`, never `LOCAL RESEARCH`; the existing unauthorized handler may open the sign-in sheet;
+  - `/api/stats` returns 503 or the API is unreachable: `MODE UNAVAILABLE`, never `LOCAL RESEARCH`.
+- This is the design author's call: a 401 is proof that auth is enabled, and an unreadable service must not be presented as local research.
 - Keep desktop nav visible and the narrow-view `Menu` button. Improve its active state and focus visibility without changing the route set.
 
 ### Drift hero
@@ -98,8 +100,9 @@ Desktop hierarchy:
 - Authorisation stamp stays immediately under the subject.
 - Difference line stays directly above the thread grid and uses stored summary counts only.
 - Scan control:
-  - primary label `Run scan`;
-  - first run on an empty record uses `Run baseline`;
+  - one primary header action only;
+  - label is `Run baseline` when the record has no comparable scan and `Run scan` afterwards;
+  - remove the duplicate baseline button from the empty sheet; the empty state explains the action and points to the header control;
   - while queued/running, show clear pending feedback and keep pending columns visible;
   - if not scannable, keep refusal reasons visible; never disable silently.
 - Baseline empty state copy: `Baseline recorded. No prior scan to compare.` when the only comparable scan is a baseline with no drift events.
@@ -115,10 +118,10 @@ Introduce one shared visual mapping used by the grid/current column, `ThreadCard
 | `PERSISTENT` | Neutral ink outline badge |
 | `FIXED` | Verified green badge |
 | `RECURRING` | Risk red badge with slight emphasis |
-| `NO DRIFT` | Quiet muted chip, only when a prior comparable scan exists |
+| `NO DRIFT` | Quiet muted chip in the difference summary only, when a prior comparable scan exists |
 | `BASELINE` | First scan state, not an event badge |
 
-When evidence exists but no drift event was stored, show no classification label. Use a neutral `No stored classification` detail state. Do not fall back to `PERSISTENT`.
+`NO DRIFT` is a scan-level summary from the backend, never a stored per-fingerprint drift event. It must not appear as a row/current-column classification. When evidence exists but no drift event was stored, show no classification label. Use a neutral `No stored classification` detail state. Do not fall back to `PERSISTENT`.
 
 ### Thread grid and cards
 
@@ -171,12 +174,19 @@ The authorisation fields remain required when status is `authorized`. That stric
 3. **Mode truth:** add a test for JWT mode with no session that rejects `LOCAL RESEARCH`.
 4. **Dialog keyboard behaviour:** add focus containment, restore, and Escape handling for `RegisterTargetSheet` and `SignIn`, with rendered-focus tests.
 
+### Minor findings included as polish
+
+- Narrow polling in `useHistory` to a scan the current user just queued where the API response makes that distinguishable; otherwise keep polling but document why it cannot be narrowed.
+- Keep evaluation remediation copy conditional on actual duplicate labels.
+- Harden client-side CSV export: defer object-URL revocation and neutralise leading spreadsheet formula characters.
+- Backend-side evaluation error hygiene remains out of scope because this pass makes no backend changes; the UI may avoid echoing raw exception-looking text.
+
 ## Verification expected from the builder
 
 - `cd backend && .venv/bin/python -m unittest discover -s tests` stays green.
 - `cd frontend && npm test` passes with new regression tests.
 - `cd frontend && npm run build` passes.
-- Browser capture of `Drift`, `Targets`, `Evaluation`, and `Settings` at desktop and narrow widths shows no console or page errors.
+- Browser capture of `Targets`, `Evaluation`, and `Settings`, plus empty-register `Drift`, at desktop and narrow widths shows no console or page errors. Populated Drift captures require a real lab target and scan and belong to the separate viva pass.
 - No user-facing occurrence of the internal design-metaphor word.
 - Review fixes are verified by tests before visual polish is called complete.
 
