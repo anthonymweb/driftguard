@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import os
 import time
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
@@ -31,9 +31,14 @@ from .logconfig import configure_logging
 from .redaction import redact_evidence_payload
 from .scanner.engine import ScanRefused, ensure_scannable, run_scan_in_background
 from .schemas import (
+    DriftCounts,
+    DriftSummary,
     EvidenceRead,
+    FingerprintMeta,
+    HistoryScan,
     ScanRead,
     TargetCreate,
+    TargetHistory,
     TargetRead,
     TokenRequest,
     TokenResponse,
@@ -225,6 +230,74 @@ def get_target(target_id: int, db: Session = Depends(get_db),
     if target is None:
         raise HTTPException(status_code=404, detail="Target not found")
     return presenters.target_read(target, presenters.latest_scan_for(db, target.id))
+
+
+@app.get("/api/targets/{target_id}/history", response_model=TargetHistory)
+def target_history(target_id: int, limit: int = Query(20, ge=1, le=100),
+                   db: Session = Depends(get_db),
+                   principal: Principal = Depends(require_role("viewer"))):
+    target = db.get(models.Target, target_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="Target not found")
+    scans = list(db.scalars(
+        select(models.Scan).where(models.Scan.target_id == target_id)
+        .order_by(models.Scan.id.desc()).limit(limit)))
+    scan_ids = [scan.id for scan in scans]
+    evidence_by_scan = {scan_id: [] for scan_id in scan_ids}
+    drift_by_scan = {scan_id: [] for scan_id in scan_ids}
+    if scan_ids:
+        for row in db.scalars(select(models.Evidence).where(models.Evidence.scan_id.in_(scan_ids)).order_by(models.Evidence.id)):
+            evidence_by_scan[row.scan_id].append(row)
+        for row in db.scalars(select(models.DriftEvent).where(models.DriftEvent.scan_id.in_(scan_ids)).order_by(models.DriftEvent.id)):
+            drift_by_scan[row.scan_id].append(row)
+    earliest_completed_id = db.scalar(
+        select(func.min(models.Scan.id)).where(
+            models.Scan.target_id == target_id, models.Scan.status == "completed"
+        )
+    )
+    history_scans = []
+    for scan in scans:
+        comparable = scan.status == "completed"
+        drift_rows = drift_by_scan[scan.id] if comparable else []
+        counts = {"NEW": 0, "PERSISTENT": 0, "FIXED": 0, "RECURRING": 0}
+        for row in drift_rows:
+            if row.classification in counts:
+                counts[row.classification] += 1
+        if not comparable:
+            state = "INCOMPLETE"
+        elif scan.is_baseline or scan.id == earliest_completed_id:
+            state = "BASELINE"
+        elif not drift_rows:
+            state = "NO DRIFT"
+        else:
+            state = "CHANGED"
+        history_scans.append(HistoryScan(
+            scan=scan,
+            comparable=comparable,
+            evidence=evidence_by_scan[scan.id],
+            drift=drift_rows,
+            summary=DriftSummary(state=state, counts=DriftCounts(**counts)),
+        ))
+
+    referenced = {ev.fingerprint for rows in evidence_by_scan.values() for ev in rows}
+    referenced |= {row.evidence_fingerprint for rows in drift_by_scan.values() for row in rows}
+    catalogue: dict[str, FingerprintMeta] = {}
+    if referenced:
+        for ev in db.scalars(
+            select(models.Evidence).where(models.Evidence.fingerprint.in_(referenced))
+            .order_by(models.Evidence.id.desc())
+        ):
+            if ev.fingerprint not in catalogue:
+                catalogue[ev.fingerprint] = FingerprintMeta(
+                    title=ev.title, category=ev.category,
+                    severity=ev.severity, resource=ev.resource,
+                )
+
+    return TargetHistory(
+        target=presenters.target_read(target, presenters.latest_scan_for(db, target_id)),
+        scans=history_scans,
+        fingerprints=catalogue,
+    )
 
 
 @app.post("/api/targets/{target_id}/scans", response_model=ScanRead, status_code=status.HTTP_201_CREATED)
