@@ -86,11 +86,19 @@ changed since the previous authorised observation?* It is not a generic SOC dash
   enabled with a local-only token map; `/api/evaluation` returned `available: false`
   with the duplicate-label reason. `/api/targets/1/history` returned 404, as expected
   with an empty register.
-- Browser-level checks (breakpoints, focus rings, lab-driven drift) were **not** run in
-  this harness. A live viva rehearsal with the lab remains the next verification step.
-- Backend final review was self-review by the implementing agent; no fresh reviewer
-  subagent was available. Surface this limitation before presenting the work as
-  independently reviewed.
+- Browser-level passive capture was completed with REA against
+  `http://127.0.0.1:5173` at 1280px and 500px. All rendered routes produced no console
+  or page errors. `#/drift` resolves to `#/targets` while the register is empty; the
+  narrow viewport collapses the primary nav into a `MENU` button. Local-only screenshots:
+  `/tmp/opencode/driftguard-{targets,evaluation,settings,narrow}.png`.
+- A lab-driven viva (register/sync, baseline, drift scan, redacted export, real keyboard
+  focus pass) remains unrun. Static browser capture does not replace it.
+- Independent read-only code review of `8af20c0..55dce04` completed on 2026-11-24. No
+  Critical issues. Important: stale-history target-switch race, UI-derived `PERSISTENT`
+  fallback, misleading `LOCAL RESEARCH` chip under JWT/no-session state, dialog focus
+  management, and the missing live viva. Minor: polling scope, evaluation error/remediation
+  copy, CSV URL revocation and formula hardening. The reviewer did not rerun the suites;
+  the test/build evidence above is the implementer's recorded verification.
 
 ## Paused / not current work
 
@@ -103,8 +111,12 @@ changed since the previous authorised observation?* It is not a generic SOC dash
   lab sequence without clearing scan history produces duplicate labels and an ambiguous
   join.
 - `Remediation` and `User` models exist; remediation has no endpoint or workflow yet.
-- A browser-level viva rehearsal against the lab has not been run; the API and unit-level
-  contracts are green, but visual breakpoints and focus rings still need a human pass.
+- Static browser capture passed at wide and narrow viewports, but a lab-driven viva with
+  real `DriftEvent` rows, redacted export, and keyboard focus operation has not been run.
+- Independent review found four code-level Important issues to fix before the console is
+  treated as done: the `useHistory` target-switch race, the UI `PERSISTENT` fallback, the
+  unconditional `LOCAL RESEARCH` mode chip, and dialog focus management. The first two
+  touch evidence integrity and the frozen classification contract.
 - `.driftguard_redaction_secret` was tracked in earlier commits. It is now untracked and
   ignored. If the repository was shared, rotate the secret (delete it and let the backend
   regenerate it); this changes redaction tokens for old evidence.
@@ -125,14 +137,19 @@ changed since the previous authorised observation?* It is not a generic SOC dash
 
 ## Next steps
 
-1. Run the live viva rehearsal with the lab: register/sync targets, establish a baseline,
+1. Fix the four code-level Important review findings on a feature branch off `main`,
+   with focused regression tests: request-generation guard in `useHistory`, removal of
+   the UI-side `PERSISTENT` fallback, explicit auth/mode state instead of "no session means
+   local research", and focus containment/restore/Escape for dialogs.
+2. Run the live viva rehearsal with the lab: register/sync targets, establish a baseline,
    switch `tls-legacy` on, scan, and confirm the Drift sheet shows stored `DriftEvent`
    rows with `NEW`/`PERSISTENT` classifications and a redacted CSV export.
-2. Do the browser-level 900px/600px and keyboard-focus pass; unit tests cover the
-   behavioural branches but not rendered focus visibility.
-3. Optionally rotate `.driftguard_redaction_secret` if the earlier tracked copy could
+3. Repeat the browser pass at 900px/600px and with real keyboard focus after the fixes;
+   unit tests cover behavioural branches but not rendered focus visibility.
+4. Address the Minor review findings: polling scope, evaluation error/remediation copy,
+   and CSV download/formula hardening.
+5. Optionally rotate `.driftguard_redaction_secret` if the earlier tracked copy could
    have been shared; doing so changes redaction tokens for existing evidence.
-4. Treat the backend sign-off as self-review only until a fresh reviewer is available.
 
 ## Verify before claiming completion
 
