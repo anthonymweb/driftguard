@@ -49,7 +49,8 @@ def _approved_port_set(approved_ports: list[int] | None) -> list[int]:
     return [int(p) for p in (approved_ports or [])]
 
 
-def ensure_scannable(target: models.Target) -> None:
+def scannability_reasons(target: models.Target) -> list[str]:
+    """Every reason the engine would refuse to assess this target; empty when scannable."""
     reasons: list[str] = []
     if target.status != "active":
         reasons.append("target must be active")
@@ -67,6 +68,11 @@ def ensure_scannable(target: models.Target) -> None:
         reasons.append(
             f"target address port {explicit} is not in approved_ports; the engine may only assess approved ports"
         )
+    return reasons
+
+
+def ensure_scannable(target: models.Target) -> None:
+    reasons = scannability_reasons(target)
     if reasons:
         raise ScanRefused("; ".join(reasons))
 

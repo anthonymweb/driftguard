@@ -76,6 +76,14 @@ class TargetCreate(BaseModel):
         return self
 
 
+class ScanSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    status: str
+    started_at: datetime
+    completed_at: datetime | None
+
+
 class TargetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -92,6 +100,9 @@ class TargetRead(BaseModel):
     discovery_wordlist: str | None
     status: str
     created_at: datetime
+    last_scan: ScanSummary | None = None
+    scannable: bool = False
+    refusal_reasons: list[str] = Field(default_factory=list)
 
 
 class ScanRead(BaseModel):

@@ -13,7 +13,7 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from . import models
+from . import models, presenters
 from .audit import audit
 from .auth import (
     Principal,
@@ -207,13 +207,15 @@ def register_target(payload: TargetCreate, db: Session = Depends(get_db),
         basis=target.authorization_basis,
         registered_by=principal.username,
     )
-    return target
+    return presenters.target_read(target, None)
 
 
 @app.get("/api/targets", response_model=list[TargetRead])
 def list_targets(db: Session = Depends(get_db),
                  principal: Principal = Depends(require_role("viewer"))):
-    return list(db.scalars(select(models.Target).order_by(models.Target.id.desc())))
+    targets = list(db.scalars(select(models.Target).order_by(models.Target.id.desc())))
+    scans = presenters.latest_scans_for(db, [target.id for target in targets])
+    return [presenters.target_read(target, scans.get(target.id)) for target in targets]
 
 
 @app.get("/api/targets/{target_id}", response_model=TargetRead)
@@ -222,7 +224,7 @@ def get_target(target_id: int, db: Session = Depends(get_db),
     target = db.get(models.Target, target_id)
     if target is None:
         raise HTTPException(status_code=404, detail="Target not found")
-    return target
+    return presenters.target_read(target, presenters.latest_scan_for(db, target.id))
 
 
 @app.post("/api/targets/{target_id}/scans", response_model=ScanRead, status_code=status.HTTP_201_CREATED)
