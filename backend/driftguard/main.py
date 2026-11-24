@@ -37,6 +37,7 @@ from .schemas import (
     FingerprintMeta,
     HistoryScan,
     ScanRead,
+    StatsRead,
     TargetCreate,
     TargetHistory,
     TargetRead,
@@ -297,6 +298,20 @@ def target_history(target_id: int, limit: int = Query(20, ge=1, le=100),
         target=presenters.target_read(target, presenters.latest_scan_for(db, target_id)),
         scans=history_scans,
         fingerprints=catalogue,
+    )
+
+
+@app.get("/api/stats", response_model=StatsRead)
+def stats(db: Session = Depends(get_db),
+          principal: Principal = Depends(require_role("viewer"))):
+    counts = {}
+    for name, model in (("targets", models.Target), ("scans", models.Scan),
+                        ("evidence", models.Evidence), ("drift_events", models.DriftEvent)):
+        counts[name] = db.scalar(select(func.count()).select_from(model)) or 0
+    return StatsRead(
+        **counts,
+        auth_mode="jwt" if auth_enabled() else "local_research",
+        redaction={"enabled": True, "token_map": "local-only"},
     )
 
 

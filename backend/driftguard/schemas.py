@@ -198,3 +198,12 @@ class TargetHistory(BaseModel):
     target: TargetRead
     scans: list[HistoryScan] = Field(default_factory=list)
     fingerprints: dict[str, FingerprintMeta] = Field(default_factory=dict)
+
+
+class StatsRead(BaseModel):
+    targets: int
+    scans: int
+    evidence: int
+    drift_events: int
+    auth_mode: str
+    redaction: dict
