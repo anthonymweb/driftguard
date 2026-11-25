@@ -122,4 +122,67 @@ describe('Drift', () => {
     expect(screen.getByText(/Run a baseline to start the record/)).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
   });
+
+  it('shows the latest comparable counts as four metric cards', async () => {
+    const counts = { NEW: 1, PERSISTENT: 3, FIXED: 2, RECURRING: 1 };
+    renderDrift({
+      client: {
+        history: vi.fn().mockResolvedValue({
+          target,
+          scans: [{
+            scan: {
+              id: 2, target_id: 1, status: 'completed',
+              started_at: '2026-11-14T09:30:00Z', completed_at: '2026-11-14T09:31:00Z',
+              is_baseline: false, label: null, error: null,
+            },
+            comparable: true,
+            evidence: [{
+              id: 9, scan_id: 2, fingerprint: 'eservices-lab/TLS/a', category: 'TLS',
+              title: 'Legacy TLS', severity: 'High', resource: '127.0.0.1:8443',
+              details: {}, observed_at: '2026-11-14T09:30:00Z',
+            }],
+            drift: [],
+            summary: { state: 'CHANGED', counts },
+          }],
+          fingerprints: {
+            'eservices-lab/TLS/a': {
+              title: 'Legacy TLS', category: 'TLS', severity: 'High', resource: '127.0.0.1:8443',
+            },
+          },
+        }),
+        runScan: vi.fn(),
+      },
+    });
+
+    await screen.findByRole('heading', { name: 'eservices-lab' });
+    expect(screen.getByText('New findings').closest('li').textContent).toContain('1');
+    expect(screen.getByText('Persistent findings').closest('li').textContent).toContain('3');
+    expect(screen.getByText('Fixed findings').closest('li').textContent).toContain('2');
+    expect(screen.getByText('Recurring findings').closest('li').textContent).toContain('1');
+  });
+
+  it('omits the metric cards when the latest summary carries no counts', async () => {
+    renderDrift({
+      client: {
+        history: vi.fn().mockResolvedValue({
+          target,
+          scans: [{
+            scan: {
+              id: 2, target_id: 1, status: 'completed',
+              started_at: '2026-11-14T09:30:00Z', completed_at: '2026-11-14T09:31:00Z',
+              is_baseline: false, label: null, error: null,
+            },
+            comparable: true, evidence: [], drift: [],
+            summary: { state: 'CHANGED' },
+          }],
+          fingerprints: {},
+        }),
+        runScan: vi.fn(),
+      },
+    });
+
+    await screen.findByRole('heading', { name: 'eservices-lab' });
+    expect(screen.queryByText('New findings')).toBeNull();
+    expect(screen.queryByText('Persistent findings')).toBeNull();
+  });
 });

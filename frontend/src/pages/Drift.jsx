@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AuthorisationStamp } from '../components/AuthorisationStamp';
 import { DifferenceLine } from '../components/DifferenceLine';
 import { EvidenceDetail } from '../components/EvidenceDetail';
+import { Icon } from '../components/Icon';
 import {
   EmptySheet, PendingScanPanel, SheetError, SheetLoading,
 } from '../components/StateBlocks';
@@ -115,6 +116,7 @@ export function Drift({
           </div>
           <div className="subject-actions">
             <button type="button" className="secondary-button" onClick={reload}>
+              <Icon name="refresh" />
               Refresh
             </button>
             <button
@@ -124,6 +126,7 @@ export function Drift({
               title={refusal ?? undefined}
               onClick={runScan}
             >
+              <Icon name="play_arrow" />
               {scanBusy ? 'Queueing…' : 'Run scan'}
             </button>
           </div>
@@ -163,6 +166,23 @@ export function Drift({
         {!loading && !error && model?.hasComparable && (
           <>
             <DifferenceLine model={model} />
+            {model.latestComparable?.summary?.counts && (
+              <ul className="metric-cards" aria-label="Counts in the latest comparable scan">
+                {[
+                  ['NEW', 'New findings', 'metric-new', 'add'],
+                  ['PERSISTENT', 'Persistent findings', 'metric-persistent', 'keep'],
+                  ['FIXED', 'Fixed findings', 'metric-fixed', 'check_circle'],
+                  ['RECURRING', 'Recurring findings', 'metric-recurring', 'repeat'],
+                ].map(([key, label, cls, icon]) => (
+                  <li key={key} className={`metric-card ${cls}`}>
+                    <span className="metric-icon"><Icon name={icon} /></span>
+                    <p className="metric-label">{label}</p>
+                    <p className="metric-value">{model.latestComparable.summary.counts[key] ?? 0}</p>
+                    <p className="metric-note">in the latest comparable scan</p>
+                  </li>
+                ))}
+              </ul>
+            )}
             <PendingScanPanel scans={model.pendingScans} />
             {narrow ? (
               <ThreadCards
