@@ -362,3 +362,20 @@ instead of failing.
 With both in place the divergent state was repaired live — the VAmPI reset withdrew the
 published port even though the recorded state already said closed — and the domain
 verified clean: **17 scenarios OK, 0 mismatches**.
+
+## 2026-11-25 — Clarity SecOps UI restyle
+
+Approved plan: `docs/superpowers/plans/2026-11-25-stitch-clarity-ui.md`. Palette authority:
+`stitch_driftguard_research_security_console/clarity_secops/DESIGN.md` YAML frontmatter,
+with amber `#b45309` from its prose. All four product surfaces (Drift, Targets,
+Evaluation, Settings) were restyled in React + Vite + plain CSS. Added Clarity tokens and
+CDN fonts/icons, a fixed desktop sidebar with mobile header/tab bar, real-count metric
+and KPI cards, Targets tiles/search/filters and a register slide-over, Settings cards,
+and a responsive/state-block pass. No backend or dependency changes; the frozen
+classification rules and evidence-only behaviour are untouched.
+
+Verification: frontend 24 files / 93 tests and production build green; backend 143 tests
+green. A real target was registered through the UI and eight screenshots were captured
+at 1440×900 and 390×844; CDP checks confirmed the correct nav per breakpoint and no fatal
+state. The only console error was the pre-existing favicon 404. Owner visual approval per
+surface is still pending.
