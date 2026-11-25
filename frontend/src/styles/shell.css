@@ -111,10 +111,4 @@
 .form-error { color: var(--risk); }
 .fatal { max-width: 720px; margin: var(--space-7) auto; padding: var(--space-6); border-top: 2px solid var(--risk); }
 
-.settings-page { max-width: 860px; margin: 0 auto; padding: var(--space-6) var(--space-5); }
-.settings-section { border-top: 1px solid var(--rule); padding: var(--space-4) 0; }
-.settings-section:first-of-type { border-top: 2px solid var(--ink); }
-.settings-section h2 { font-size: var(--step-1); margin: 0 0 var(--space-2); }
-.settings-list { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-2) var(--space-4); margin: 0; }
-.settings-list dt { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
-.settings-list dd { margin: 0; }
+

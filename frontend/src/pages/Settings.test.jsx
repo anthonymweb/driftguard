@@ -40,4 +40,17 @@ describe('Settings', () => {
       .toContain('API unreachable at 127.0.0.1:8000');
     expect(screen.queryByText('drift events')).toBeNull();
   });
+
+  it('renders the footprint as four count tiles and the real UI version', async () => {
+    const client = { stats: vi.fn().mockResolvedValue(stats) };
+    render(<Settings client={client} session={null} apiBase="http://127.0.0.1:8000" />);
+
+    await screen.findByText('Connection');
+    expect(document.querySelectorAll('.footprint-tiles li')).toHaveLength(4);
+    expect(screen.getByText('scans')).toBeTruthy();
+    expect(screen.getByText('9')).toBeTruthy();
+    expect(screen.getByText('evidence')).toBeTruthy();
+    expect(screen.getByText('142')).toBeTruthy();
+    expect(screen.getByText(/^driftguard-ui \d+\.\d+\.\d+$/)).toBeTruthy();
+  });
 });

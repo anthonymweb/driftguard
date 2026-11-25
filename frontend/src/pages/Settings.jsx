@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { SheetError, SheetLoading } from '../components/StateBlocks';
 import { formatDateTime } from '../lib/format';
+import { APP_VERSION } from '../lib/version';
 
 const FOOTPRINT = [
   ['targets', 'targets'],
@@ -39,7 +40,6 @@ export function Settings({ client, session, apiBase }) {
 
   const { stats } = state;
   const local = stats.auth_mode === 'local_research';
-  const version = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0';
 
   return (
     <section className="settings-page">
@@ -50,6 +50,7 @@ export function Settings({ client, session, apiBase }) {
         </div>
       </header>
 
+      <div className="settings-grid">
       <Section title="Connection">
         <dl className="settings-list">
           <dt>API base</dt>
@@ -88,20 +89,21 @@ export function Settings({ client, session, apiBase }) {
       </Section>
 
       <Section title="Data footprint">
-        <dl className="settings-list">
+        <ul className="footprint-tiles">
           {FOOTPRINT.map(([key, label]) => (
-            <div key={key}>
-              <dt>{label}</dt>
-              <dd className="mono">{String(stats[key] ?? 0)}</dd>
-            </div>
+            <li key={key}>
+              <p className="tile-label">{label}</p>
+              <p className="tile-value mono">{String(stats[key] ?? 0)}</p>
+            </li>
           ))}
-        </dl>
+        </ul>
       </Section>
 
       <Section title="Version">
-        <p className="mono">driftguard-ui {version}</p>
+        <p className="mono">driftguard-ui {APP_VERSION}</p>
         <p className="engraved">RECORD GENERATED {formatDateTime(new Date().toISOString())}</p>
       </Section>
+      </div>
     </section>
   );
 }
