@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { Icon } from '../components/Icon';
 import { SheetError, SheetLoading } from '../components/StateBlocks';
 import { formatDateTime, formatRate } from '../lib/format';
 
@@ -13,12 +14,13 @@ const COLUMNS = [
   ['down_observations', 'Down observations'],
 ];
 
-function Readout({ label, value, numerator, denominator }) {
+function Readout({ label, value, numerator, denominator, icon }) {
   return (
     <div className="readout">
+      {icon && <span className="readout-icon"><Icon name={icon} /></span>}
       <p className="engraved">{label}</p>
-      <p className="readout-value mono">{value}</p>
-      <p className="readout-fraction mono">{numerator}/{denominator}</p>
+      <p className="readout-value">{value}</p>
+      {denominator != null && <p className="readout-fraction mono">{numerator}/{denominator}</p>}
     </div>
   );
 }
@@ -71,20 +73,40 @@ export function Evaluation({ client }) {
         </section>
       ) : (
         <>
-          <div className="readouts">
-            <Readout
-              label="DETECTION ACCURACY"
-              value={formatRate(data.overall.detection_accuracy)}
-              numerator={data.overall.detections}
-              denominator={data.overall.present_total}
-            />
-            <Readout
-              label="FALSE-POSITIVE RATE"
-              value={formatRate(data.overall.false_positive_rate)}
-              numerator={data.overall.false_positives}
-              denominator={data.overall.absent_total}
-            />
-          </div>
+          <ul className="readouts" aria-label="Key metrics">
+            <li>
+              <Readout
+                label="DETECTION ACCURACY"
+                value={formatRate(data.overall.detection_accuracy)}
+                numerator={data.overall.detections}
+                denominator={data.overall.present_total}
+                icon="accuracy"
+              />
+            </li>
+            <li>
+              <Readout
+                label="FALSE-POSITIVE RATE"
+                value={formatRate(data.overall.false_positive_rate)}
+                numerator={data.overall.false_positives}
+                denominator={data.overall.absent_total}
+                icon="gpp_maybe"
+              />
+            </li>
+            <li>
+              <Readout
+                label="UNMEASURED SCANS"
+                value={String(data.overall.unmeasured_scans ?? 0)}
+                icon="help_outline"
+              />
+            </li>
+            <li>
+              <Readout
+                label="DOWN OBSERVATIONS"
+                value={String(data.overall.down_observations ?? 0)}
+                icon="cloud_off"
+              />
+            </li>
+          </ul>
 
           <table className="area-table">
             <caption>Per-area accuracy</caption>
@@ -102,8 +124,8 @@ export function Evaluation({ client }) {
                 .map((area) => (
                   <tr key={area}>
                     <th scope="row">{area}</th>
-                    {COLUMNS.map(([key]) => (
-                      <td key={key}>{String(data.per_area[area][key] ?? 0)}</td>
+                    {COLUMNS.map(([key, label]) => (
+                      <td key={key} data-label={label}>{String(data.per_area[area][key] ?? 0)}</td>
                     ))}
                   </tr>
                 ))}
@@ -111,8 +133,8 @@ export function Evaluation({ client }) {
             <tfoot>
               <tr>
                 <th scope="row">Overall</th>
-                {COLUMNS.map(([key]) => (
-                  <td key={key}>{String(data.overall[key] ?? 0)}</td>
+                {COLUMNS.map(([key, label]) => (
+                  <td key={key} data-label={label}>{String(data.overall[key] ?? 0)}</td>
                 ))}
               </tr>
             </tfoot>

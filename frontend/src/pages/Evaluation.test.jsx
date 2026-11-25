@@ -83,4 +83,13 @@ describe('Evaluation', () => {
       .toContain('API unreachable'));
     expect(screen.queryByRole('table')).toBeNull();
   });
+
+  it('shows unmeasured scans and down observations as KPI cards', async () => {
+    const client = { evaluation: vi.fn().mockResolvedValue(available) };
+    render(<Evaluation client={client} />);
+
+    await screen.findByText('DETECTION ACCURACY');
+    expect(screen.getByText('UNMEASURED SCANS').closest('li').textContent).toContain('4');
+    expect(screen.getByText('DOWN OBSERVATIONS').closest('li').textContent).toContain('2');
+  });
 });
