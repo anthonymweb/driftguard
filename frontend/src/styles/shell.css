@@ -66,26 +66,36 @@
   max-width: 720px;
   margin: var(--space-7) auto;
   padding: var(--space-6);
-  border-top: 2px solid var(--ink);
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .skeleton-row {
   display: block;
   height: 18px;
   margin: var(--space-3) 0;
-  background: var(--rule);
+  background: var(--surface-container-high);
+  border-radius: var(--radius-sm);
   opacity: 0.55;
 }
 
-.sheet-error { border-top-color: var(--risk); }
+.sheet-error {
+  border: 1px solid var(--error);
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+.sheet-error .engraved { color: var(--on-error-container); }
 .empty-sheet h1,
-.fatal h1 { font-size: var(--step-2); margin: var(--space-2) 0 var(--space-3); }
+.fatal h1 { font-family: var(--font-display); font-size: var(--step-2); margin: var(--space-2) 0 var(--space-3); }
 
 .pending-panel {
   margin: var(--space-4) 0;
   padding: var(--space-3) var(--space-4);
-  border-left: 2px solid var(--pending);
-  background: var(--sheet);
+  border-left: 3px solid var(--pending);
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
 }
 
 .sheet-backdrop {
@@ -95,20 +105,23 @@
   display: grid;
   place-items: center;
   padding: var(--space-5);
-  background: rgba(21, 24, 26, 0.28);
+  background: rgba(19, 27, 46, 0.4);
 }
 
 .signin-sheet {
   width: min(420px, 100%);
   padding: var(--space-6);
-  border-top: 2px solid var(--ink);
+  border-top: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
 }
-.signin-sheet h1 { font-size: var(--step-2); margin: var(--space-2) 0; }
+.signin-sheet h1 { font-family: var(--font-display); font-size: var(--step-2); letter-spacing: -0.02em; margin: var(--space-2) 0; }
 .signin-sheet form { display: grid; gap: var(--space-2); margin-top: var(--space-5); }
-.signin-sheet label { font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.08em; }
-.signin-sheet input { padding: 8px 10px; border: 1px solid var(--ink); background: var(--sheet); }
+.signin-sheet label { font-family: var(--font-ui); font-size: var(--step-0); }
+.signin-sheet input { padding: 10px var(--space-3); border: 1px solid var(--outline-variant); border-radius: var(--radius-sm); background: var(--muted); }
 .signin-sheet .primary-button { margin-top: var(--space-3); }
-.form-error { color: var(--risk); }
-.fatal { max-width: 720px; margin: var(--space-7) auto; padding: var(--space-6); border-top: 2px solid var(--risk); }
+.form-error { color: var(--error); }
+.fatal { max-width: 720px; margin: var(--space-7) auto; padding: var(--space-6); border-top: 0; border: 1px solid var(--error); border-radius: var(--radius-lg); }
 
 
