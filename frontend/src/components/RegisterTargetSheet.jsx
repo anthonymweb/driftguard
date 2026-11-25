@@ -36,7 +36,7 @@ export function RegisterTargetSheet({ onSubmit, onClose, busy = false, error = n
   }
 
   return (
-    <div className="sheet-backdrop">
+    <div className="sheet-backdrop is-drawer">
       <section
         className="register-sheet sheet"
         role="dialog"

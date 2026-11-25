@@ -23,6 +23,22 @@ const target = {
   refusal_reasons: [],
 };
 
+const civic = {
+  ...target,
+  id: 2,
+  name: 'civic',
+  address: 'https://127.0.0.1:8445',
+  authorization_status: 'pending',
+  authorized_by: null,
+  authorized_at: null,
+  authorization_basis: null,
+  approved_scope: [],
+  approved_ports: [],
+  last_scan: null,
+  scannable: false,
+  refusal_reasons: ['target must be explicitly authorized'],
+};
+
 function renderPage(overrides = {}) {
   const props = {
     client: { runScan: vi.fn(), createTarget: vi.fn() },
@@ -77,5 +93,34 @@ describe('Targets', () => {
     renderPage({ targets: [] });
     expect(screen.getByText('No targets registered.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Register the first target' })).toBeTruthy();
+  });
+
+  it('filters the roster by search text', async () => {
+    renderPage({ targets: [target, civic] });
+    await userEvent.setup().type(screen.getByLabelText('Search targets'), 'eservices');
+    expect(screen.getByText('eservices-lab')).toBeTruthy();
+    expect(screen.queryByText('civic')).toBeNull();
+  });
+
+  it('filters by authorisation status and shows real counts', async () => {
+    renderPage({ targets: [target, civic] });
+    // the non-scannable ("refused") target is visible under the default All filter
+    expect(screen.getByText('civic')).toBeTruthy();
+    const user = userEvent.setup();
+    const pending = screen.getByRole('button', { name: /Pending/ });
+    expect(pending.textContent).toContain('1');
+    await user.click(pending);
+
+    expect(pending.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByText('eservices-lab')).toBeNull();
+    expect(screen.getByText('civic')).toBeTruthy();
+  });
+
+  it('distinguishes a filtered-empty register from an empty register', async () => {
+    renderPage({ targets: [target] });
+    await userEvent.setup().click(screen.getByRole('button', { name: /Refused/ }));
+    expect(screen.queryByText('eservices-lab')).toBeNull();
+    expect(screen.queryByText('No targets registered.')).toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('No targets match');
   });
 });
