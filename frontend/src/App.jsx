@@ -40,7 +40,7 @@ export default function App({ makeClient = createApiClient } = {}) {
 
   const route = useHashRoute();
   const targetsState = useTargets(client);
-  const navNarrow = useMediaQuery('(max-width: 600px)');
+  const narrow = useMediaQuery('(max-width: 767px)');
 
   useEffect(() => {
     if (route.page !== 'drift' || route.targetId != null) return;
@@ -121,7 +121,7 @@ export default function App({ makeClient = createApiClient } = {}) {
 
   return (
     <>
-      <AppShell route={route} mode={mode} onSignOut={signOut} navNarrow={navNarrow}>
+      <AppShell route={route} mode={mode} onSignOut={signOut} narrow={narrow}>
         {page}
       </AppShell>
       {needsSignIn && (

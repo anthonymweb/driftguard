@@ -45,21 +45,6 @@
 }
 
 @media (max-width: 600px) {
-  .top-strip { flex-wrap: wrap; height: auto; padding: var(--space-3); gap: var(--space-3); }
-  .top-nav { width: 100%; flex-direction: column; gap: var(--space-2); }
-  .top-nav[hidden] { display: none; }
-  .mode { margin-left: 0; }
-  .nav-menu { margin-left: auto; }
-  .nav-menu .top-nav {
-    position: absolute;
-    z-index: 2;
-    top: 100%;
-    right: var(--space-3);
-    min-width: 160px;
-    padding: var(--space-3);
-    border: 1px solid var(--ink);
-    background: var(--paper);
-  }
   .subject { flex-direction: column; }
   .subject-actions { width: 100%; flex-direction: column; }
   .register-actions { flex-direction: column; }

@@ -1,65 +1,63 @@
-import { useState } from 'react';
+import { Icon } from './Icon';
+import { APP_VERSION } from '../lib/version';
 
 const DESTINATIONS = [
-  ['drift', 'Drift'],
-  ['targets', 'Targets'],
-  ['evaluation', 'Evaluation'],
-  ['settings', 'Settings'],
+  ['drift', 'Drift', 'monitoring'],
+  ['targets', 'Targets', 'dns'],
+  ['evaluation', 'Evaluation', 'analytics'],
+  ['settings', 'Settings', 'tune'],
 ];
 
-export function AppShell({ route, mode, onSignOut, navNarrow = false, children }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const nav = (
-    <nav
-      className="top-nav"
-      aria-label="Primary"
-      id="primary-nav"
-      hidden={navNarrow && !menuOpen ? true : undefined}
-    >
-      {DESTINATIONS.map(([page, label]) => (
-        <a
-          key={page}
-          href={page === 'drift' ? '#/drift' : `#/${page}`}
-          aria-current={route.page === page ? 'page' : undefined}
-          onClick={() => setMenuOpen(false)}
-        >
-          {label}
-        </a>
-      ))}
-    </nav>
+export function AppShell({ route, mode, onSignOut, narrow = false, children }) {
+  const modeChip = (
+    <span className="mode-chip">
+      {mode.kind === 'operator' ? `OPERATOR · ${mode.username}` : 'LOCAL RESEARCH'}
+    </span>
   );
+  const signOut = mode.kind === 'operator' && onSignOut ? (
+    <button type="button" className="text-button" onClick={onSignOut}>Sign out</button>
+  ) : null;
+
+  const links = DESTINATIONS.map(([page, label, icon]) => (
+    <a
+      key={page}
+      href={page === 'drift' ? '#/drift' : `#/${page}`}
+      aria-current={route.page === page ? 'page' : undefined}
+    >
+      <Icon name={icon} />
+      {label}
+    </a>
+  ));
+
+  if (narrow) {
+    return (
+      <div className="shell">
+        <header className="mobile-bar">
+          <a className="brand" href="#/drift" aria-label="DriftGuard drift console">
+            <Icon name="shield" />
+            <span>DriftGuard</span>
+          </a>
+          <span className="version-chip">v{APP_VERSION}</span>
+          {modeChip}
+          {signOut}
+        </header>
+        <nav className="tab-bar" aria-label="Primary" id="primary-nav">{links}</nav>
+        <main className="console">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="shell">
-      <header className="top-strip">
-        <a className="wordmark" href="#/drift" aria-label="DriftGuard drift console">
-          driftguard
+      <aside className="sidebar">
+        <a className="brand" href="#/drift" aria-label="DriftGuard drift console">
+          <Icon name="shield" />
+          <span>DriftGuard</span>
+          <span className="version-chip">v{APP_VERSION}</span>
         </a>
-        {navNarrow ? (
-          <div className="nav-menu">
-            <button
-              type="button"
-              className="secondary-button"
-              aria-expanded={menuOpen}
-              aria-controls="primary-nav"
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              Menu
-            </button>
-            {nav}
-          </div>
-        ) : nav}
-        <div className="mode">
-          <span className="mode-chip mono">
-            {mode.kind === 'operator' ? `OPERATOR · ${mode.username}` : 'LOCAL RESEARCH'}
-          </span>
-          {mode.kind === 'operator' && (
-            <button type="button" className="text-button" onClick={onSignOut}>
-              Sign out
-            </button>
-          )}
-        </div>
-      </header>
+        <nav className="side-nav" aria-label="Primary" id="primary-nav">{links}</nav>
+        <div className="sidebar-foot">{modeChip}{signOut}</div>
+      </aside>
       <main className="console">{children}</main>
     </div>
   );

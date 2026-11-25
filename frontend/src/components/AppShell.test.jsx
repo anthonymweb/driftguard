@@ -1,11 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AppShell } from './AppShell';
 
 describe('AppShell', () => {
-  it('renders typographic navigation and marks the current page', () => {
+  it('renders a fixed sidebar navigation and marks the current page', () => {
     render(
       <AppShell
         route={{ page: 'targets', targetId: null }}
@@ -16,22 +16,32 @@ describe('AppShell', () => {
       </AppShell>,
     );
 
+    expect(document.querySelector('.sidebar')).toBeTruthy();
+    expect(document.querySelector('.tab-bar')).toBeNull();
+    expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'Drift' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Targets' }).getAttribute('aria-current'))
-      .toBe('page');
+    expect(screen.getByRole('link', { name: 'Targets' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText('OPERATOR · alice')).toBeTruthy();
+    expect(screen.getByText(/^v\d+\.\d+\.\d+$/)).toBeTruthy();
     expect(screen.getByText('body')).toBeTruthy();
   });
 
-  it('collapses navigation behind a menu at narrow widths', async () => {
-    render(<AppShell route={{ page: 'drift', targetId: 1 }} mode={{ kind: 'local' }} navNarrow>
-      <p>body</p>
-    </AppShell>);
-    const menu = screen.getByRole('button', { name: 'Menu' });
-    expect(menu.getAttribute('aria-expanded')).toBe('false');
-    await userEvent.setup().click(menu);
-    expect(screen.getByRole('button', { name: 'Menu' }).getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByRole('link', { name: 'Drift' })).toBeTruthy();
+  it('renders a bottom tab bar at narrow widths instead of the sidebar', () => {
+    render(
+      <AppShell route={{ page: 'drift', targetId: 1 }} mode={{ kind: 'local' }} narrow>
+        <p>body</p>
+      </AppShell>,
+    );
+
+    expect(document.querySelector('.tab-bar')).toBeTruthy();
+    expect(document.querySelector('.sidebar')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Menu' })).toBeNull();
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
+    expect(screen.getAllByRole('navigation')).toHaveLength(1);
+    expect(within(nav).getAllByRole('link')).toHaveLength(4);
+    expect(screen.getByRole('link', { name: 'Drift' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Drift' }).getAttribute('href')).toBe('#/drift');
+    expect(screen.getByText('LOCAL RESEARCH')).toBeTruthy();
   });
 
   it('states local-research mode and offers sign-out only for an operator', async () => {
