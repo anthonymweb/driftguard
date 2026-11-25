@@ -1,23 +1,55 @@
 :root {
-  --paper: #ECEAE3;
-  --sheet: #F5F3ED;
-  --ink: #15181A;
-  --ink-2: #565B5B;
-  --rule: #C7C3B7;
-  --signal: #1E45C8;
-  --risk: #A93627;
-  --verified: #2C6A4F;
-  --pending: #8A600F;
+  /* Clarity SecOps palette — authority: clarity_secops/DESIGN.md YAML frontmatter */
+  --surface: #faf8ff;
+  --surface-dim: #d2d9f4;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f3ff;
+  --surface-container: #eaedff;
+  --surface-container-high: #e2e7ff;
+  --surface-container-highest: #dae2fd;
+  --on-surface: #131b2e;
+  --on-surface-variant: #434655;
+  --outline: #737686;
+  --outline-variant: #c3c6d7;
+  --primary: #004ac6;
+  --on-primary: #ffffff;
+  --primary-container: #2563eb;
+  --on-primary-container: #eeefff;
+  --secondary: #006e2d;
+  --secondary-container: #7cf994;
+  --on-secondary-container: #007230;
+  --tertiary: #ac0031;
+  --tertiary-container: #d71142;
+  --on-tertiary-container: #ffecec;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --inverse-surface: #283044;
+  --inverse-on-surface: #eef0ff;
+  --pending: #b45309; /* amber — DESIGN.md prose "Warnings / Drift" */
 
-  --font-ui: 'Chivo Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Chivo Mono Variable', ui-monospace, monospace;
+  /* Legacy aliases: keep untouched component rules correct while pages are reworked */
+  --paper: var(--surface);
+  --sheet: var(--surface-container-lowest);
+  --muted: var(--surface-container-low);
+  --hover: var(--surface-container);
+  --ink: var(--on-surface);
+  --ink-2: var(--on-surface-variant);
+  --rule: var(--outline-variant);
+  --signal: var(--primary);
+  --risk: var(--error);
+  --verified: var(--secondary);
 
-  --step--1: 0.6875rem;
-  --step-0: 0.875rem;
-  --step-1: 1rem;
-  --step-2: 1.5rem;
-  --step-3: 1.75rem;
-  --step-4: 2.5rem;
+  --font-ui: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --step--1: 0.75rem;   /* 12px label-sm */
+  --step-0: 0.875rem;   /* 14px body-md */
+  --step-1: 1rem;       /* 16px body-lg / headline-sm */
+  --step-2: 1.5rem;     /* 24px headline-lg */
+  --step-3: 1.75rem;    /* 28px */
+  --step-4: 2.25rem;    /* 36px display */
 
   --space-1: 4px;
   --space-2: 8px;
@@ -27,7 +59,17 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --index-width: 236px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --shadow-card: 0 1px 2px rgba(19, 27, 46, 0.05);
+  --shadow-overlay: 0 10px 25px -5px rgba(15, 23, 42, 0.04),
+    0 8px 10px -6px rgba(15, 23, 42, 0.02);
+
+  --sidebar-width: 240px;
   --top-height: 64px;
+  --tabbar-height: 64px;
+  --content-max: 1280px;
   --row-height: 38px;
 }
