@@ -1,4 +1,9 @@
 @media (max-width: 900px) {
+  .topbar-inner, .footer-inner { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .topbar-left { gap: var(--space-3); }
+  .top-divider { display: none; }
+  .top-nav.capsule a { padding-left: var(--space-2); padding-right: var(--space-2); }
+
   .target-select-label { display: grid; gap: var(--space-1); }
   .target-select-label select {
     padding: 10px var(--space-3);
