@@ -379,3 +379,43 @@ green. A real target was registered through the UI and eight screenshots were ca
 at 1440×900 and 390×844; CDP checks confirmed the correct nav per breakpoint and no fatal
 state. The only console error was the pre-existing favicon 404. Owner visual approval per
 surface is still pending.
+
+## 2026-11-27 — Demo guide and real-data preload
+
+**What changed.** Added `docs/DEMO_GUIDE.md` (single runbook: architecture, tech stack,
+target-loading paths, exact start commands, panel talking points, preloaded-dataset notes,
+rehearsal checklist, troubleshooting). Wrote and got approval for
+`docs/superpowers/specs/2026-11-27-demo-guide-design.md` and
+`docs/superpowers/plans/2026-11-27-demo-guide-preload.md`. Created the untracked
+`demo-driftguard.db` with five real lab targets and 25 completed real scans; labels
+`DEMO-0`…`DEMO-4` and all scenario toggles apply only to `eservices-lab`. Archived the
+duplicate-label `lab/scans.json` histories outside the repo. Added one load-bearing
+infrastructure fix in `backend/driftguard/scanner/engine.py` (`db.flush()` before
+`_record_drift`) plus two regression tests; 145 backend tests pass, 93 frontend tests and
+the production build pass.
+
+**Why.** The owner wants to explain DriftGuard panels instantly from a running console
+instead of running scans during the presentation. Only real completed scans are acceptable
+as demo evidence, and the research DB must stay untouched.
+
+**What was learned.** (1) `evaluation_service._duplicate_completed_labels` groups by label
+alone, not by target — five targets sharing `DEMO-n` would block Evaluation, so only one
+target may be labelled. (2) A scan with `completed_with_errors` emits no drift events and
+is not a comparison base. (3) `SessionLocal(autoflush=False)` made pending `Evidence` rows
+invisible to `_record_drift`: NEW events disappeared and PERSISTENT was reported as FIXED.
+The flush fix is infrastructure; `drift.py` semantics are unchanged. (4) `eservices-lab`
+port 8080 returns `301` and the Python `httpx` CLI exits 1 on a redirect, so the demo DB
+scopes that target to 8443 only — this must be reapplied after every `driftguard.sync`.
+
+**Remaining.** Per-surface visual approval of the Clarity restyle is still outstanding, and
+the browser/keyboard viva with real `DriftEvent` rows has only now been enabled by this
+preload. The four important code-review findings listed in PROJECT-STATE.md remain open and
+are outside this demo task.
+
+Verification of the regenerated dataset: 25/25 scans `completed`; `/api/stats` reports 5
+targets, 25 scans, 7 evidence rows, 8 drift events. Drift history reads exactly
+`BASELINE → NEW(2) → PERSISTENT(2) → PERSISTENT(1)+FIXED(1) → PERSISTENT(1)+RECURRING(1)`;
+clean targets read `BASELINE → NO DRIFT ×4`. `/api/evaluation` is available with zero false
+positives, TLS accuracy 1.0 (7/7), and five honest Network misses caused by the 8443-only
+scope. The research DB still holds 1 target / 3 scans / 0 evidence / 0 drift events.
+All four console routes were read back through Chrome CDP and show stored real data.

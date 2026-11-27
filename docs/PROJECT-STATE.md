@@ -1,4 +1,4 @@
-# Project state — 2026-11-25
+# Project state — 2026-11-27
 
 This is the authoritative handoff for a fresh agent. Read it after `AGENTS.md`.
 Update it at the end of every work session.
@@ -48,7 +48,7 @@ product pitch; say **drift detection** and **what changed between scans**.
 - Tasks 20–24: Alembic migrations target the application database; `/ready`; scan rate
   limiting; structured + audit logging; JWT authentication and `viewer`/`operator`/
   `admin` roles.
-- **143 backend tests passing** (verified 2026-11-24 in the writable clone).
+- **145 backend tests passing** (verified 2026-11-27 after the scan-engine flush fix; 143 before the two new regression tests).
 - API surfaces that exist: `/health`, `/ready`, `/api/auth/token`, `/api/users`,
   `/api/targets` (create/list/get), `/api/targets/{id}/scans` (create/list),
   `/api/scans/{id}/evidence`, `/api/scans/{id}/evidence/redacted`.
@@ -93,6 +93,29 @@ changed since the previous authorised observation?* It is not a generic SOC dash
 - Drift metric cards are omitted when the latest comparable scan has no counts; missing
   data is never rendered as zero. Evaluation shows only measured KPIs and otherwise shows
   the backend's own unavailable reason.
+
+## Verification evidence — 2026-11-27 (demo preload)
+
+- Backend: `.venv/bin/python -m unittest discover -s tests` → `Ran 145 tests ... OK` after
+  the flush fix and two new RED→GREEN regression tests (`test_new_finding_is_classified_with_no_autoflush`,
+  `test_persistent_finding_is_not_reported_as_fixed_with_no_autoflush`). Before the fix those
+  tests produced `[] != NEW` and `FIXED != PERSISTENT` respectively.
+- Frontend: `npm test` → 24 files / 93 tests passed; `npm run build` → production build OK.
+- 25/25 preload scans reached `completed` (log: `/tmp/opencode/driftguard-demo-preload/sequence-final.log`).
+  `/api/stats` → `targets 5, scans 25, evidence 7, drift_events 8`, `local_research`, redaction on.
+- Drift history for `eservices-lab`, oldest → newest: `DEMO-0 BASELINE`; `DEMO-1 CHANGED NEW=2`;
+  `DEMO-2 CHANGED PERSISTENT=2`; `DEMO-3 CHANGED PERSISTENT=1 FIXED=1`;
+  `DEMO-4 CHANGED PERSISTENT=1 RECURRING=1`. A clean target (`juice-shop`) reads
+  `BASELINE` then four `NO DRIFT`.
+- `/api/evaluation` → `available: true`, `duplicates: []`, overall `detections 7 / present_total 12`,
+  `misses 5`, `false_positives 0`; TLS `7/7` accuracy `1.0`; Network `0/5` (honest misses from
+  the 8443-only scope); API has no present findings by design.
+- Research DB re-checked: `targets 1 / scans 3 / scan_evidence 0 / drift_events 0` — unchanged.
+- UI DOM pass on all four hash routes from a real Chrome CDP session: Drift renders the two
+  stored TLS threads with `PERSISTENT` / `RECURRING` and the scan-by-scan difference line;
+  Targets shows five authorised targets with last scans; Evaluation shows the measured KPIs;
+  Settings shows `targets 5 / scans 25 / evidence 7 / drift events 8`. Screenshots kept in
+  `/tmp/opencode/driftguard-ui-shots/` (not committed).
 
 ## Verification evidence — 2026-11-25 (Clarity restyle)
 
@@ -144,10 +167,37 @@ changed since the previous authorised observation?* It is not a generic SOC dash
   copy, CSV URL revocation and formula hardening. The reviewer did not rerun the suites;
   the test/build evidence above is the implementer's recorded verification.
 
-## Paused / not current work
+## Current focus — demo guide and preloaded lab evidence (2026-11-27)
 
-- The guided-demo design and plan exist in `docs/superpowers/specs/` and
-  `docs/superpowers/plans/`. The owner explicitly said to ignore the demo for now.
+- The owner asked for **one** demo document and a console already loaded with real lab
+  scans. Deliverable: `docs/DEMO_GUIDE.md`. Design:
+  `docs/superpowers/specs/2026-11-27-demo-guide-design.md`; plan:
+  `docs/superpowers/plans/2026-11-27-demo-guide-preload.md` (both approved, inline execution).
+- Demo data lives in the untracked `demo-driftguard.db` at the repo root; the research DB
+  `driftguard.db` (1 target, 3 scans) is preserved. The API must be started with
+  `DRIFTGUARD_DATABASE_URL=sqlite:////home/anthonyl/driftguard/demo-driftguard.db` and
+  `DRIFTGUARD_SCAN_RATE_LIMIT=60/minute`; without the env var it serves research data.
+- The console is preloaded with 25 completed real scans across five lab targets.
+  `eservices-lab` alone carries labels `DEMO-0` … `DEMO-4` and the scenario toggles; the
+  other four targets are scanned unlabelled and stay clean (`BASELINE` / `NO DRIFT`).
+  The API area (`api-debug`) is deliberately not demonstrated — it honestly shows no
+  present findings.
+- `lab/scans.json` (ground-truth marks) and `demo-driftguard.db` are untracked. Prior mark
+  histories are archived outside the repo in `/tmp/opencode/driftguard-demo-backup/`:
+  `scans.json.pre-demo` (original duplicate `S0,S1,S2`) and `scans.json.bad-preload`
+  (discarded first preload with wrong drift events). `lab/ground_truth.csv` was never touched.
+- **One product-code change was made**: `backend/driftguard/scanner/engine.py` now calls
+  `db.flush()` after persisting evidence and before `_record_drift`. `SessionLocal` uses
+  `autoflush=False`, so without the flush the current scan's evidence was invisible to the
+  drift comparison: NEW events vanished and PERSISTENT was reported as FIXED. Two regression
+  tests were added in `backend/tests/test_scanner_engine.py` (RED→GREEN verified). The frozen
+  rules in `drift.py` were not changed; the plan's "no product code changes" constraint was
+  explicitly voided for this one line by the owner.
+- The demo DB's `eservices-lab.approved_ports` is `[8443]`, not `[8080, 8443]`: port 8080
+  answers with a `301` and the `httpx` CLI exits 1 on a redirect, which makes a labelled
+  scan `completed_with_errors` (no drift events). **Reapply after every `driftguard.sync`.**
+- Verification: backend suite 145 tests OK; frontend 24 files / 93 tests and production
+  build OK. See §Verification evidence — 2026-11-27 below for the live API state.
 
 ## Known limitations and open items
 
@@ -188,9 +238,23 @@ changed since the previous authorised observation?* It is not a generic SOC dash
    Vite and plain CSS; use CDN fonts/icons with system fallbacks, not new UI libraries.
 9. The design YAML palette in `clarity_secops/DESIGN.md` is authoritative over that file's
    prose palette; amber `#b45309` is the only adopted prose colour.
+10. Demo labels and scenario toggles belong to `eservices-lab` only. `_duplicate_completed_labels`
+    groups by label without target, so labelling all five targets makes `/api/evaluation`
+    unavailable. Do not add `DEMO-*` labels to the other four targets and do not toggle
+    scenarios on them.
+11. The demo DB's `eservices-lab` is scoped to port 8443 only. Restoring 8080 with a fresh
+    sync reintroduces the `httpx` redirect failure and empty drift history; reapply the fix.
+12. `lab/ground_truth.csv` stays untouched — evaluation builds truth from `lab/scans.json`.
+    Archive that file outside the repo before reusing demo labels.
+13. The scan-engine flush is load-bearing infrastructure, not a classifier change. Do not
+    remove it to satisfy the original "no product code changes" wording in the demo design.
 
 ## Next steps
 
+0. Hand the owner `docs/DEMO_GUIDE.md` with the API running on `demo-driftguard.db` and the
+   console hard-refreshed at `#/drift/1`. The four high-value talking points are: labelled
+   `NEW → PERSISTENT → FIXED → RECURRING` on eservices-lab, `NO DRIFT` on a clean target,
+   measured Evaluation KPIs with honest Network misses, and redaction in Settings.
 1. Obtain the owner's approve/reject decision for each of the four Clarity surfaces from
    `/tmp/opencode/driftguard-ui-shots/` (desktop and mobile), and apply any requested
    corrections before treating the restyle as accepted.

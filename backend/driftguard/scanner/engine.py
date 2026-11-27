@@ -329,6 +329,10 @@ def assess_target(db: Session, target: models.Target, scan: models.Scan | None =
                 )
             )
 
+    # The drift query must see this scan's evidence. Sessions are autoflush=False,
+    # so pending Evidence rows would otherwise be invisible to _record_drift.
+    db.flush()
+
     # Classify drift against the previous completed scan. A scan that did not
     # complete cleanly is neither a comparison base nor a source of drift events.
     scan.completed_at = datetime.now(timezone.utc)

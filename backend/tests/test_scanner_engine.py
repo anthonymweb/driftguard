@@ -337,6 +337,59 @@ class EngineAssessmentTests(_DBTestCase):
     @mock.patch("driftguard.scanner.engine.tools.run_httpx")
     @mock.patch("driftguard.scanner.engine.tools.run_testssl")
     @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_new_finding_is_classified_with_no_autoflush(
+        self, m_nmap, m_testssl, m_httpx, m_gobuster, m_sleep
+    ):
+        # Production uses SessionLocal(autoflush=False). Evidence added to the
+        # session must still be visible to the drift comparison in that session.
+        db = self.Session(autoflush=False)
+        target = self._make_target(db, approved_scope=["network"], approved_ports=[8443])
+        db.add(models.Scan(target_id=target.id, status="completed"))  # empty baseline
+        db.commit()
+        m_nmap.return_value = {"open_ports": [{"port": 8081, "state": "open", "service": "http", "version": ""}]}
+
+        scan = assess_target(db, target)
+
+        events = list(db.scalars(select(models.DriftEvent).where(models.DriftEvent.scan_id == scan.id)))
+        self.assertEqual(
+            [(e.evidence_fingerprint, e.classification) for e in events],
+            [("svc/Network/port-open", "NEW")],
+        )
+        db.close()
+
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_gobuster")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
+    def test_persistent_finding_is_not_reported_as_fixed_with_no_autoflush(
+        self, m_nmap, m_testssl, m_httpx, m_gobuster, m_sleep
+    ):
+        db = self.Session(autoflush=False)
+        target = self._make_target(db, approved_scope=["network"], approved_ports=[8443])
+        previous = models.Scan(target_id=target.id, status="completed")
+        db.add(previous)
+        db.flush()
+        db.add(models.Evidence(scan_id=previous.id, fingerprint="svc/Network/port-open",
+                               category="Network", title="Unexpected open port",
+                               severity="High", resource="8081", details={}))
+        db.commit()
+        m_nmap.return_value = {"open_ports": [{"port": 8081, "state": "open", "service": "http", "version": ""}]}
+
+        scan = assess_target(db, target)
+
+        events = list(db.scalars(select(models.DriftEvent).where(models.DriftEvent.scan_id == scan.id)))
+        self.assertEqual(
+            [(e.evidence_fingerprint, e.classification) for e in events],
+            [("svc/Network/port-open", "PERSISTENT")],
+        )
+        db.close()
+
+    @mock.patch("driftguard.scanner.engine.time.sleep")
+    @mock.patch("driftguard.scanner.engine.tools.run_gobuster")
+    @mock.patch("driftguard.scanner.engine.tools.run_httpx")
+    @mock.patch("driftguard.scanner.engine.tools.run_testssl")
+    @mock.patch("driftguard.scanner.engine.tools.run_nmap")
     def test_discovery_off_by_default_gobuster_never_called(
         self, m_nmap, m_testssl, m_httpx, m_gobuster, m_sleep
     ):
