@@ -54,9 +54,11 @@ FastAPI main.py  →  SQLite demo-driftguard.db
 frontend/ — React Drift console (Drift · Targets · Evaluation · Settings)
 ```
 
-Read flow: the console loads target history from the API and renders the stored
-classification. It never re-derives a label, and an empty register or an empty observation
-window is shown as such — never as "all clear".
+Read flow: the console loads target history from the API. The metric counts and the
+difference line come from stored `DriftEvent` rows. The grid marks observed presence itself;
+where a finding is present but no stored classification exists it displays `PERSISTENT` as a
+known UI fallback (tracked separately for removal) — the backend owns the frozen labels.
+An empty register or an empty observation window is shown as such — never as "all clear".
 
 Write flow: a scan is queued through `POST /api/targets/{id}/scans`, assessed in a background
 session, and becomes comparable to earlier scans only when it reaches `completed`. A
@@ -96,7 +98,12 @@ If a target is `DOWN`: `python3 domain.py up <target-name>` and re-check.
 
 ### 4.2 Start the API **against the preloaded demo database**
 
+Free port 8000 first. A stale API still listening there will make the new process fail
+silently (the error goes only to the log) and leave the demo talking to the wrong database.
+
 ```bash
+lsof -ti tcp:8000 | xargs -r kill
+sleep 2
 cd /home/anthonyl/driftguard/backend
 DRIFTGUARD_DATABASE_URL=sqlite:////home/anthonyl/driftguard/demo-driftguard.db \
 DRIFTGUARD_SCAN_RATE_LIMIT=60/minute \
@@ -119,6 +126,10 @@ curl -sS http://127.0.0.1:8000/api/stats
 # expected: targets 5, scans 25, evidence > 0, drift_events > 0,
 #           auth_mode local_research, redaction enabled
 ```
+
+**Abort gate:** do not register targets or run a demo scan unless that response shows
+`targets: 5` and `scans: 25`. If it shows anything else, the API is serving the wrong
+database — stop and restart it with the env vars above.
 
 ### 4.3 Start the console
 
@@ -198,9 +209,10 @@ only after a scan observes it.
 
 The main answer to "what changed between scans?"
 
-- Select **eservices-lab**. Its labelled history is `DEMO-0` … `DEMO-4`. The scan axis is
-  built only from completed scans; the grid shows one row per finding and one column per
-  comparable observation. The frozen difference line reads the stored `DriftEvent` rows.
+- Select **eservices-lab**. Its labelled history is `DEMO-0` … `DEMO-4`. Only completed scans
+  are comparable; an incomplete scan appears as a `NOT COMPARED` column and carries no drift
+  rows. The grid shows one row per finding and one column per comparable observation, and the
+  frozen difference line reads the stored `DriftEvent` rows.
 - Say: *"The first observation is the baseline. When legacy TLS and the certificate mismatch
   appear, those rows become NEW. On the next observation they are PERSISTENT, because they
   are still there. When legacy TLS is removed it becomes FIXED. When it returns later it is
