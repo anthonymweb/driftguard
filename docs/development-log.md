@@ -463,7 +463,7 @@ hardening; polling scope and Evaluation error/remediation copy; and the 900px/60
 real-keyboard-focus browser pass. They are listed in `PROJECT-STATE.md` so future handoffs do
 not mistake this visual branch for a resolution of those items.
 
-Verification: frontend 30 files / 157 tests pass; production build succeeds; backend 145 tests
+Verification: frontend 30 files / 158 tests pass; production build succeeds; backend 145 tests
 unchanged; scoped forbidden-copy check clean. Live API on `demo-driftguard.db` reported
 `5 / 25 / 7 / 8` and `/api/evaluation` `7/12`, 5 misses, 0 false positives, TLS `7/7`,
 Network `0/5`; research DB remains `1 / 3 / 0 / 0`. Screenshots and `dom-audit.json` are in

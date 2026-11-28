@@ -20,6 +20,13 @@ describe('storedCurrentState', () => {
     })).toEqual({ classification: 'BASELINE', scanId: 1, stored: true });
   });
 
+  it('does not accept a derived label for a baseline cell', () => {
+    expect(storedCurrentState({
+      cells: [{ scanId: 1, kind: 'baseline', classification: null }],
+      current: { classification: 'PERSISTENT', scanId: 1 },
+    })).toEqual({ classification: null, scanId: 1, stored: false });
+  });
+
   it('does not present a derived persistent label as a stored classification', () => {
     expect(storedCurrentState({
       cells: [

@@ -39,7 +39,7 @@ product pitch; say **drift detection** and **what changed between scans**.
 - Work is on branch `faithful-screen-rebuild` off `22057e5`; commits `2d906a7` → `5209681`.
   Seven tasks are implemented. Task-scoped reviews: all Approved after fix loops for
   Task 3 (`9d33dc6` → `9e19044`) and Task 4 (`ab6dc13` → `5209681`).
-- Frontend: **30 files / 157 tests passing**; production build succeeds. Backend untouched:
+- Frontend: **30 files / 158 tests passing**; production build succeeds. Backend untouched:
   **145 tests passing**. React 19 + Vite + plain CSS only; no new dependency. The extra 14
   tests close the whole-branch review's evidence-fidelity, target-state, and mobile-table
   findings before merge.
@@ -310,6 +310,12 @@ so a handoff replacement does not imply they were resolved:
   changed by this branch.
 - CSV download/formula hardening: open, Minor, `frontend/src/lib/csv.js` untouched.
 - Polling scope and Evaluation error/remediation copy: open, Minor, untouched.
+- Duplicate per-area derivation in Evaluation's table and fidelity panel: open, Minor; both
+  currently read the same backend data but can drift if edited separately.
+- Malformed `recorded_at` on the newest target drift entry: open, Minor; it falls back to
+  array ordering rather than an explicit no-state.
+- Desktop Settings footprint grid is 2×2 at 1024px although the brief described 3-up tiles:
+  open, cosmetic; deliberately not reopened in this fidelity pass.
 - 900px/600px and real-keyboard-focus browser pass: open verification; the automated gate only
   covered 1440×900 and 390×844 DOM/screenshots.
 

@@ -13,7 +13,7 @@ export function storedCurrentState(row) {
   if (FROZEN_CLASSIFICATIONS.has(cell?.classification)) {
     return { classification: cell.classification, scanId: current.scanId, stored: true };
   }
-  if (cell?.kind === 'baseline' && FROZEN_CLASSIFICATIONS.has(current?.classification)) {
+  if (cell?.kind === 'baseline' && current?.classification === 'BASELINE') {
     return { classification: current.classification, scanId: current.scanId, stored: true };
   }
   return { classification: null, scanId: current?.scanId ?? null, stored: false };
