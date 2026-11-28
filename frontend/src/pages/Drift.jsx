@@ -38,6 +38,17 @@ export function Drift({
     setScanError(null);
   }, [targetId]);
 
+  useEffect(() => {
+    if (!model) return;
+    const rows = model.groups.flatMap((group) => group.rows);
+    if (rows.length === 0) return;
+    setSelectedFingerprint((current) => (
+      rows.some((row) => row.fingerprint === current)
+        ? current
+        : rows[0].fingerprint
+    ));
+  }, [model]);
+
   async function runScan() {
     if (!target) return;
     setScanBusy(true);

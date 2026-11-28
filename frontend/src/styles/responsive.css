@@ -4,6 +4,11 @@
   .top-divider { display: none; }
   .top-nav.capsule a { padding-left: var(--space-2); padding-right: var(--space-2); }
 
+  .drift-subject { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .subject,
+  .drift-subject > .stamp,
+  .metric-card { padding-left: var(--space-4); padding-right: var(--space-4); }
+
   .target-select-label { display: grid; gap: var(--space-1); }
   .target-select-label select {
     padding: 10px var(--space-3);
@@ -14,14 +19,12 @@
   }
   .roster-row { grid-template-columns: minmax(0, 1fr); }
   .roster-actions { justify-items: start; }
-  .detail-rail { grid-template-columns: minmax(0, 1fr); }
-  .detail-rail {
-    position: sticky;
-    bottom: 0;
-    background: var(--surface-container-lowest);
-    border-top: 1px solid var(--rule);
-    padding-bottom: var(--space-4);
-  }
+  .detail-rail { position: static; bottom: auto; }
+
+  .snapshot-grid { grid-template-columns: minmax(0, 1fr); }
+  .snapshot-card { min-height: auto; }
+  .snapshot-detail { max-height: 180px; }
+  .provenance-grid { grid-template-columns: minmax(0, 1fr); }
 
   .thread-cards { list-style: none; margin: 0; padding: 0; }
   .card-group { margin-top: var(--space-4); }
@@ -50,8 +53,17 @@
   .compact-timeline { display: flex; gap: 4px; list-style: none; margin: var(--space-3) 0 0; padding: 0; }
   .compact-timeline .tick { position: relative; width: 18px; height: 12px; border-top: 1px solid var(--rule); }
   .compact-timeline .mark { top: 6px; }
+  .card-expanded {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--outline-variant);
+  }
+  .card-state { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .card-state .engraved { margin: 0; }
 
-  .metric-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
   .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-grid { grid-template-columns: minmax(0, 1fr); }
 }
