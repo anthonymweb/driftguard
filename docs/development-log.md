@@ -459,7 +459,9 @@ target-state reads are now distinct; mobile Evaluation keeps its scrollable six-
 **Carried-over findings explicitly still open** (not introduced or resolved by this branch):
 `useHistory` request-generation/abort guard; explicit auth/mode state instead of inferring
 local research from no session; dialog focus containment/restore/Escape; CSV download/formula
-hardening; polling scope and Evaluation error/remediation copy; and the 900px/600px plus
+hardening; polling scope and Evaluation error/remediation copy; duplicate per-area derivation
+in Evaluation; malformed `recorded_at` on the newest target drift entry; the 2×2 desktop
+Settings footprint grid where the brief described 3-up tiles; and the 900px/600px plus
 real-keyboard-focus browser pass. They are listed in `PROJECT-STATE.md` so future handoffs do
 not mistake this visual branch for a resolution of those items.
 

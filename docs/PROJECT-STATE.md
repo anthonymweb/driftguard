@@ -40,7 +40,7 @@ product pitch; say **drift detection** and **what changed between scans**.
   Seven tasks are implemented. Task-scoped reviews: all Approved after fix loops for
   Task 3 (`9d33dc6` → `9e19044`) and Task 4 (`ab6dc13` → `5209681`).
 - Frontend: **30 files / 158 tests passing**; production build succeeds. Backend untouched:
-  **145 tests passing**. React 19 + Vite + plain CSS only; no new dependency. The extra 14
+  **145 tests passing**. React 19 + Vite + plain CSS only; no new dependency. The extra 15
   tests close the whole-branch review's evidence-fidelity, target-state, and mobile-table
   findings before merge.
 - Four screens rebuilt around the reference section order: Drift (subject → authorisation →
