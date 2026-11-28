@@ -92,4 +92,21 @@ describe('Evaluation', () => {
     expect(screen.getByText('UNMEASURED SCANS').closest('li').textContent).toContain('4');
     expect(screen.getByText('DOWN OBSERVATIONS').closest('li').textContent).toContain('2');
   });
+
+  it('keeps the reference lower two-column module with real measurement scope', async () => {
+    render(<Evaluation client={{ evaluation: vi.fn().mockResolvedValue(available) }} />);
+    await screen.findByText('DETECTION ACCURACY');
+
+    const left = document.querySelector('.fidelity-panel');
+    const right = document.querySelector('.scope-panel');
+    expect(left).toBeTruthy();
+    expect(right).toBeTruthy();
+    expect(left.textContent).toContain('TLS');
+    expect(right.textContent).toContain('24 Nov 2026');
+    expect(right.textContent).toContain('S5');
+    expect(right.textContent).toContain('unmeasured');
+    expect(screen.queryByText(/Cohen/)).toBeNull();
+    expect(screen.queryByText(/F1/)).toBeNull();
+    expect(screen.queryByText(/Merkle/)).toBeNull();
+  });
 });
