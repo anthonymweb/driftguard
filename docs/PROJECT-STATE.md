@@ -30,6 +30,40 @@ that supplies ground truth; the product is the backend plus the dashboard.
 "Comparator" is an internal design metaphor only. Never use it in user-facing copy or the
 product pitch; say **drift detection** and **what changed between scans**.
 
+## Current focus — faithful screen rebuild (2026-11-28)
+
+- Owner chose a faithful rebuild of the four supplied screens over a faster clarity pass;
+  resemblance is the tie-breaker wherever an evidence-only substitution leaves a choice.
+  Design: `docs/superpowers/specs/2026-11-27-faithful-screen-rebuild-design.md` (approved).
+  Plan: `docs/superpowers/plans/2026-11-27-faithful-screen-rebuild.md`.
+- Work is on branch `faithful-screen-rebuild` off `22057e5`; commits `2d906a7` → `5209681`.
+  Seven tasks are implemented. Task-scoped reviews: all Approved after fix loops for
+  Task 3 (`9d33dc6` → `9e19044`) and Task 4 (`ab6dc13` → `5209681`).
+- Frontend: **29 files / 143 tests passing**; production build succeeds. Backend untouched:
+  **145 tests passing**. React 19 + Vite + plain CSS only; no new dependency.
+- Four screens rebuilt around the reference section order: Drift (subject → authorisation →
+  difference line → four stored-count cards → timeline → detail rail), Targets (register head
+  → three stat tiles → filter/search toolbar → roster cards with one stored-history read per
+  target and a stored-state pill), Evaluation (header → methodology → four KPI cards → area
+  table → 7/5 lower module), Settings (title → four-cell telemetry ribbon → panels A–D →
+  evidence-only banner).
+- Every displayed value comes from the demo API. No seeded, simulated, invented, or
+  UI-derived finding; no `Skipped`/`Regressed`; frozen labels only. No fabricated telemetry,
+  CLI snippet, seal, κ, F1, PID, key, digest, sync percentage, latency, or checksum action was
+  added to close a visual gap. Evaluation keeps its honest unavailable branch.
+- Live CDP pass against `demo-driftguard.db` at `1440×900` and `390×844`: Drift shows
+  `eservices-lab` with stored `PERSISTENT`/`RECURRING` and no API step; Targets shows five
+  targets with four `NO DRIFT`; Evaluation shows `7/12`, `0/56`, 17 unmeasured, TLS `7/7`,
+  Network `0/5`; Settings shows `local_research`, redaction enabled, footprint `5/25/7/8`.
+  Research DB remains `1 / 3 / 0 / 0`. Only console error is the pre-existing favicon 404.
+- Screenshots: `/tmp/opencode/driftguard-rebuild-shots/` (`{drift,targets,evaluation,settings}-
+  {desktop,mobile}.png`, plus `dom-audit.json`). They are non-blank at the exact requested
+  dimensions. Automated structural/DOM fidelity is verified; **per-surface pixel resemblance
+  still needs the owner's eyes** before the rebuild is called visually accepted.
+- Scoped forbidden-copy check (product source excluding tests + demo guide): clean.
+  The plan's unscoped grep hits legitimate negative assertions and guide instructions, so
+  the check is recorded with that scope.
+
 ## Completed
 
 ### Lab / test domain
@@ -248,28 +282,30 @@ changed since the previous authorised observation?* It is not a generic SOC dash
     Archive that file outside the repo before reusing demo labels.
 13. The scan-engine flush is load-bearing infrastructure, not a classifier change. Do not
     remove it to satisfy the original "no product code changes" wording in the demo design.
+14. The faithful rebuild is plain CSS on React 19/Vite; do not introduce Tailwind or a UI kit
+    to improve resemblance.
+15. Target-state pills read one stored history per target and never derive a label. A newest
+    drift event with a non-frozen classification yields no state, not an older stored state.
+16. Stored snapshot cards only render states already present in the selected thread; an
+    unclassified older observation is omitted, not labelled with the latest state.
+17. No telemetry, fake provenance, fabricated bar/CLI/seal, or invented toast may be added to
+    close a visual gap with the supplied screens.
 
 ## Next steps
 
-0. Hand the owner `docs/DEMO_GUIDE.md` with the API running on `demo-driftguard.db` and the
-   console hard-refreshed at `#/drift/1`. The four high-value talking points are: labelled
+0. Obtain the owner's approve/reject decision for each of the four rebuilt surfaces from
+   `/tmp/opencode/driftguard-rebuild-shots/` (desktop and mobile). The automated gate verified
+   structure, exact dimensions, real values and non-blank captures; it did not substitute for
+   the owner's visual judgment.
+1. Hand over `docs/DEMO_GUIDE.md` with the API running on `demo-driftguard.db` and the console
+   hard-refreshed at `#/drift/1`. The four talking points are labelled
    `NEW → PERSISTENT → FIXED → RECURRING` on eservices-lab, `NO DRIFT` on a clean target,
    measured Evaluation KPIs with honest Network misses, and redaction in Settings.
-1. Obtain the owner's approve/reject decision for each of the four Clarity surfaces from
-   `/tmp/opencode/driftguard-ui-shots/` (desktop and mobile), and apply any requested
-   corrections before treating the restyle as accepted.
-2. Fix the four code-level Important review findings on a feature branch off `main`,
-   with focused regression tests: request-generation guard in `useHistory`, removal of
-   the UI-side `PERSISTENT` fallback, explicit auth/mode state instead of "no session means
-   local research", and focus containment/restore/Escape for dialogs.
-3. Run the live viva rehearsal with the lab: register/sync targets, establish a baseline,
-   switch `tls-legacy` on, scan, and confirm the Drift sheet shows stored `DriftEvent`
-   rows with `NEW`/`PERSISTENT` classifications and a redacted CSV export.
-4. Repeat the browser pass at 900px/600px and with real keyboard focus after the fixes;
-   unit tests cover behavioural branches but not rendered focus visibility.
-5. Address the Minor review findings: polling scope, evaluation error/remediation copy,
-   and CSV download/formula hardening.
-6. Optionally rotate `.driftguard_redaction_secret` if the earlier tracked copy could
+2. Run the lab-driven viva: register/sync, baseline, `tls-legacy` on, scan, confirm stored
+   `DriftEvent` rows and a redacted CSV export. A queued scan is never narrated as a finding.
+3. Keep the research DB (`driftguard.db`) untouched and reapply `[8443]` to
+   `eservices-lab.approved_ports` in the demo DB after any `driftguard.sync`.
+4. Optionally rotate `.driftguard_redaction_secret` if the earlier tracked copy could
    have been shared; doing so changes redaction tokens for existing evidence.
 
 ## Verify before claiming completion
