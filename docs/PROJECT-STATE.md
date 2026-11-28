@@ -39,8 +39,10 @@ product pitch; say **drift detection** and **what changed between scans**.
 - Work is on branch `faithful-screen-rebuild` off `22057e5`; commits `2d906a7` → `5209681`.
   Seven tasks are implemented. Task-scoped reviews: all Approved after fix loops for
   Task 3 (`9d33dc6` → `9e19044`) and Task 4 (`ab6dc13` → `5209681`).
-- Frontend: **29 files / 143 tests passing**; production build succeeds. Backend untouched:
-  **145 tests passing**. React 19 + Vite + plain CSS only; no new dependency.
+- Frontend: **30 files / 157 tests passing**; production build succeeds. Backend untouched:
+  **145 tests passing**. React 19 + Vite + plain CSS only; no new dependency. The extra 14
+  tests close the whole-branch review's evidence-fidelity, target-state, and mobile-table
+  findings before merge.
 - Four screens rebuilt around the reference section order: Drift (subject → authorisation →
   difference line → four stored-count cards → timeline → detail rail), Targets (register head
   → three stat tiles → filter/search toolbar → roster cards with one stored-history read per
@@ -58,8 +60,10 @@ product pitch; say **drift detection** and **what changed between scans**.
   Research DB remains `1 / 3 / 0 / 0`. Only console error is the pre-existing favicon 404.
 - Screenshots: `/tmp/opencode/driftguard-rebuild-shots/` (`{drift,targets,evaluation,settings}-
   {desktop,mobile}.png`, plus `dom-audit.json`). They are non-blank at the exact requested
-  dimensions. Automated structural/DOM fidelity is verified; **per-surface pixel resemblance
-  still needs the owner's eyes** before the rebuild is called visually accepted.
+  dimensions. The mobile Evaluation table now scrolls inside its card (`overflow-x: auto`,
+  `min-width: 720px`, `scrollWidth 720 / clientWidth 356`) without page-level overflow.
+  Automated structural/DOM fidelity is verified; **per-surface pixel resemblance still needs
+  the owner's eyes** before the rebuild is called visually accepted.
 - Scoped forbidden-copy check (product source excluding tests + demo guide): clean.
   The plan's unscoped grep hits legitimate negative assertions and guide instructions, so
   the check is recorded with that scope.
@@ -290,6 +294,24 @@ changed since the previous authorised observation?* It is not a generic SOC dash
     unclassified older observation is omitted, not labelled with the latest state.
 17. No telemetry, fake provenance, fabricated bar/CLI/seal, or invented toast may be added to
     close a visual gap with the supplied screens.
+18. A finding observed without a stored drift event renders `NO STORED CLASSIFICATION`, never
+    a stored-looking `PERSISTENT`. Snapshot cards use the detail stored on that same scan;
+    missing per-scan detail is stated, never copied from the latest observation.
+
+## Open carried-over findings (not changed by the faithful rebuild)
+
+These predate this branch and remain open for a future scoped session. They are recorded here
+so a handoff replacement does not imply they were resolved:
+
+- `useHistory` request-generation/abort guard: open, Important, frontend state only.
+- "No session means local research" auth/mode inference: open by design decision; do not
+  silently change it in a visual task.
+- Dialog focus containment, focus restore, and Escape handling: open, no dialog component was
+  changed by this branch.
+- CSV download/formula hardening: open, Minor, `frontend/src/lib/csv.js` untouched.
+- Polling scope and Evaluation error/remediation copy: open, Minor, untouched.
+- 900px/600px and real-keyboard-focus browser pass: open verification; the automated gate only
+  covered 1440×900 and 390×844 DOM/screenshots.
 
 ## Next steps
 

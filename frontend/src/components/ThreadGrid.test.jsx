@@ -28,9 +28,9 @@ const model = {
       fingerprint: 't/TLS/a', title: 'Legacy TLS', resource: 't:8443',
       category: 'TLS', severity: 'High',
       cells: [
-        { kind: 'baseline', lineLeft: false, lineRight: false },
-        { kind: 'incomplete', lineLeft: false, lineRight: false },
-        { kind: 'fixed', lineLeft: true, lineRight: false },
+        { scanId: 1, kind: 'baseline', classification: null, lineLeft: false, lineRight: false },
+        { scanId: 2, kind: 'incomplete', classification: null, lineLeft: false, lineRight: false },
+        { scanId: 3, kind: 'fixed', classification: 'FIXED', lineLeft: true, lineRight: false },
       ],
       current: { classification: 'FIXED', scanId: 3 },
     }],
@@ -48,7 +48,7 @@ describe('ThreadGrid', () => {
     expect(screen.getByRole('columnheader', { name: /#2/ })).toBeTruthy();
     expect(screen.getByText('NOT COMPARED')).toBeTruthy();
     expect(screen.getByRole('rowheader', { name: /Legacy TLS/ })).toBeTruthy();
-    expect(screen.getByText('FIXED')).toBeTruthy();
+    expect(screen.getAllByText('FIXED').length).toBeGreaterThan(0);
     expect(screen.getByText('baseline observation')).toBeTruthy();
     expect(container.querySelector('.thread-category .mono-chip').textContent).toBe('TLS');
     expect(container.querySelector('.thread-severity').textContent).toBe('High');
@@ -79,9 +79,9 @@ describe('ThreadGrid', () => {
           fingerprint: 't/TLS/b', title: 'Stored drift', resource: 't:8443',
           category: 'TLS', severity: 'High',
           cells: [
-            { kind: 'baseline', classification: null },
-            { kind: 'pending', classification: null },
-            { kind: 'new', classification: 'NEW' },
+            { scanId: 1, kind: 'baseline', classification: null },
+            { scanId: 2, kind: 'pending', classification: null },
+            { scanId: 3, kind: 'new', classification: 'NEW' },
           ],
           current: { classification: 'NEW', scanId: 3 },
         }],
@@ -99,6 +99,28 @@ describe('ThreadGrid', () => {
     expect(pills[2].querySelector('.state-token').textContent).toBe('NEW');
     expect(cells[1].textContent).toContain('scan pending');
     expect(cells[0].textContent).toContain('baseline observation');
+  });
+
+  it('does not present an observed finding without stored drift as a classification', () => {
+    const unclassified = {
+      ...model,
+      groups: [{
+        key: 'TLS',
+        rows: [{
+          fingerprint: 't/TLS/c', title: 'Unclassified observation', resource: 't:8443',
+          category: 'TLS', severity: 'High',
+          cells: [
+            { scanId: 1, kind: 'baseline', classification: null, lineLeft: false, lineRight: false },
+            { scanId: 3, kind: 'present', classification: null, lineLeft: true, lineRight: true },
+          ],
+          current: { classification: 'PERSISTENT', scanId: 3 },
+        }],
+      }],
+    };
+    render(<ThreadGrid model={unclassified} selected={null} onSelect={vi.fn()} />);
+
+    expect(screen.queryByText('PERSISTENT')).toBeNull();
+    expect(screen.getByText('NO STORED CLASSIFICATION')).toBeTruthy();
   });
 
   it('selects a thread on activation', async () => {

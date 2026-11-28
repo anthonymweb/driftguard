@@ -4,6 +4,7 @@ import {
   downloadText, redactedRecordFor, scanCsvFilename, toCsv,
 } from '../lib/csv';
 import { storedSnapshots } from '../lib/snapshots';
+import { storedCurrentLabel, storedCurrentState } from '../lib/stored-state';
 import { EvidenceSnapshots } from './EvidenceSnapshots';
 
 const clipboardCopy = async (text) => {
@@ -32,6 +33,8 @@ export function EvidenceDetail({
   const [error, setError] = useState(null);
   const observedIndex = lastObservedIndex(row);
   const scan = observedIndex >= 0 ? scans[observedIndex] : null;
+  const currentState = storedCurrentState(row);
+  const currentLabel = storedCurrentLabel(row);
 
   async function withRecords(action, label) {
     if (!scan) {
@@ -74,8 +77,10 @@ export function EvidenceDetail({
     <aside className="detail-rail" aria-labelledby="detail-title">
       <header className="detail-header">
         <div className="detail-badges">
-          <span className="status-pill detail-classification mono">
-            {row.current.classification}
+          <span
+            className={`status-pill detail-classification mono${currentState.stored ? '' : ' is-unmeasured'}`}
+          >
+            {currentLabel}
           </span>
           <span className="mono-chip">{row.category ?? '—'}</span>
           <span className="mono-chip">{row.resource ?? '—'}</span>

@@ -29,6 +29,18 @@ describe('TargetStatePill', () => {
       .toMatch(/No stored drift state/);
   });
 
+  it('distinguishes a loading read from an absent state', () => {
+    render(<TargetStatePill loading />);
+    expect(screen.getByLabelText(/Reading stored state/)).toBeTruthy();
+    expect(screen.queryByLabelText(/No stored drift state/)).toBeNull();
+  });
+
+  it('distinguishes a failed read from an absent state', () => {
+    render(<TargetStatePill unavailable />);
+    expect(screen.getByLabelText(/Stored state unavailable/)).toBeTruthy();
+    expect(screen.queryByLabelText(/No stored drift state/)).toBeNull();
+  });
+
   it('never renders an invented classification', () => {
     render(<TargetStatePill state={{ classification: 'REGRESSED', scanId: 5 }} />);
     expect(screen.queryByText('REGRESSED')).toBeNull();

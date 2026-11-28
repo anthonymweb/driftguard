@@ -149,6 +149,24 @@ describe('Targets', () => {
     expect(screen.getAllByText('RECURRING')).toHaveLength(2);
   });
 
+  it('marks a loading state read without asserting no stored state', () => {
+    renderPage({
+      client: { ...makeClient(), history: vi.fn().mockReturnValue(new Promise(() => {})) },
+    });
+    expect(screen.getByLabelText(/Reading stored state/)).toBeTruthy();
+    expect(screen.queryByLabelText(/No stored drift state/)).toBeNull();
+  });
+
+  it('marks a failed state read as unavailable', async () => {
+    renderPage({
+      client: { ...makeClient(), history: vi.fn().mockRejectedValue(new Error('unavailable')) },
+    });
+    await waitFor(() => expect(
+      screen.getByLabelText(/Stored state unavailable/),
+    ).toBeTruthy());
+    expect(screen.queryByLabelText(/No stored drift state/)).toBeNull();
+  });
+
   it('gives the refused stripe only to targets with stored refusal reasons', () => {
     const { container } = renderPage({
       targets: [{ ...target, scannable: false, refusal_reasons: [] }],

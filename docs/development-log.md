@@ -450,9 +450,20 @@ gate captured non-blank screenshots at 1440×900 and 390×844 and verified struc
 values, and 16px mobile gutters, but could not judge pixel resemblance. The lab-driven viva
 with a live scan and redacted export is still to be rehearsed. Minor review notes (duplicate
 area derivation in Evaluation, desktop footprint grid columns, malformed `recorded_at` edge
-case) are non-blocking and deliberately not reopened here.
+case) are non-blocking and deliberately not reopened here. The whole-branch review also found
+two evidence-fidelity defects that were fixed before merge: the renderers were showing the
+UI-derived `PERSISTENT` fallback as a stored label, and snapshot cards reused the latest
+row detail instead of that scan's stored evidence. Loading, failed, and genuinely absent
+target-state reads are now distinct; mobile Evaluation keeps its scrollable six-column table.
 
-Verification: frontend 29 files / 143 tests pass; production build succeeds; backend 145 tests
+**Carried-over findings explicitly still open** (not introduced or resolved by this branch):
+`useHistory` request-generation/abort guard; explicit auth/mode state instead of inferring
+local research from no session; dialog focus containment/restore/Escape; CSV download/formula
+hardening; polling scope and Evaluation error/remediation copy; and the 900px/600px plus
+real-keyboard-focus browser pass. They are listed in `PROJECT-STATE.md` so future handoffs do
+not mistake this visual branch for a resolution of those items.
+
+Verification: frontend 30 files / 157 tests pass; production build succeeds; backend 145 tests
 unchanged; scoped forbidden-copy check clean. Live API on `demo-driftguard.db` reported
 `5 / 25 / 7 / 8` and `/api/evaluation` `7/12`, 5 misses, 0 false positives, TLS `7/7`,
 Network `0/5`; research DB remains `1 / 3 / 0 / 0`. Screenshots and `dom-audit.json` are in

@@ -60,6 +60,7 @@ describe('useTargetStates', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(client.history).toHaveBeenCalledTimes(1);
     expect(result.current.states[3]).toBeNull();
+    expect(result.current.errors[3]).toBe(true);
   });
 
   it('settles without reads when there are no targets', async () => {

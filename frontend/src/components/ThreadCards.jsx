@@ -1,3 +1,4 @@
+import { storedCurrentLabel, storedCurrentState } from '../lib/stored-state';
 import { storedSnapshots } from '../lib/snapshots';
 import { EvidenceSnapshots } from './EvidenceSnapshots';
 import { MARK_TEXT } from './ThreadRow';
@@ -11,6 +12,8 @@ export function ThreadCards({ model, selected, onSelect }) {
           <ul>
             {group.rows.map((row) => {
               const expanded = selected === row.fingerprint;
+              const currentState = storedCurrentState(row);
+              const currentLabel = storedCurrentLabel(row);
               return (
                 <li
                   key={row.fingerprint}
@@ -22,7 +25,11 @@ export function ThreadCards({ model, selected, onSelect }) {
                         {row.title}
                       </button>
                     </h2>
-                    <span className="card-current mono">{row.current.classification}</span>
+                    <span
+                      className={`card-current mono${currentState.stored ? '' : ' is-unmeasured'}`}
+                    >
+                      {currentLabel}
+                    </span>
                     {['Critical', 'High'].includes(row.severity) && (
                       <span className="severity mono">{row.severity}</span>
                     )}
@@ -46,7 +53,11 @@ export function ThreadCards({ model, selected, onSelect }) {
                     <div className="card-expanded">
                       <div className="card-state">
                         <p className="engraved">STORED STATE</p>
-                        <span className="mono-chip">{row.current.classification}</span>
+                        <span
+                          className={`mono-chip${currentState.stored ? '' : ' is-unmeasured'}`}
+                        >
+                          {currentLabel}
+                        </span>
                       </div>
                       <EvidenceSnapshots snapshots={storedSnapshots(row, model.scans)} />
                     </div>

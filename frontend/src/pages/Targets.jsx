@@ -19,7 +19,7 @@ export function Targets({
   const [busyId, setBusyId] = useState(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
-  const { states } = useTargetStates(client, targets);
+  const { states, loading: statesLoading, errors: stateErrors } = useTargetStates(client, targets);
 
   const matches = {
     all: () => true,
@@ -186,7 +186,11 @@ export function Targets({
                   </div>
 
                   <div className="roster-badges">
-                    <TargetStatePill state={states[target.id] ?? null} />
+                    <TargetStatePill
+                      state={states[target.id] ?? null}
+                      loading={statesLoading && !stateErrors[target.id]}
+                      unavailable={Boolean(stateErrors[target.id])}
+                    />
                     <AuthorisationStamp target={target} compact />
                   </div>
 

@@ -1,4 +1,5 @@
 import { formatDateTime } from './format';
+import { storedCurrentState } from './stored-state';
 
 const OBSERVED_KINDS = new Set(['baseline', 'present', 'new', 'recurring']);
 const STORED_STATES = new Set([
@@ -10,7 +11,10 @@ function stateFor(cell, scan, row) {
   if (cell.kind === 'fixed') return 'FIXED';
   if (scan.summary?.state === 'BASELINE') return 'BASELINE';
   if (scan.summary?.state === 'NO DRIFT') return scan.summary.state;
-  if (cell.scanId === row.current?.scanId) return row.current?.classification;
+  if (cell.scanId === row.current?.scanId) {
+    const stored = storedCurrentState(row);
+    return stored.stored ? stored.classification : null;
+  }
   return null;
 }
 
@@ -35,13 +39,13 @@ export function storedSnapshots(row, scans = []) {
     if (!scan) continue;
     const state = stateFor(cell, scan, row);
     if (!STORED_STATES.has(state)) continue;
+    const evidence = (scan.item?.evidence ?? [])
+      .find((item) => item.fingerprint === row.fingerprint);
     snapshots.push({
       scanId: cell.scanId,
       state,
       time: formatDateTime(scan.completedAt ?? scan.startedAt),
-      // The row carries the latest stored evidence detail; reusing it is the only
-      // stored payload available — no per-scan detail is invented for a card.
-      detail: row.detail ?? {},
+      detail: evidence?.details ?? null,
     });
   }
   return snapshots.sort((a, b) => a.scanId - b.scanId);

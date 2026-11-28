@@ -11,7 +11,10 @@ const row = {
   resource: 't:8443',
   severity: 'High',
   current: { classification: 'PERSISTENT', scanId: 2 },
-  cells: [{ kind: 'baseline', scanId: 1 }, { kind: 'present', scanId: 2 }],
+  cells: [
+    { kind: 'baseline', scanId: 1, classification: null },
+    { kind: 'present', scanId: 2, classification: 'PERSISTENT' },
+  ],
   detail: { cipher: 'RC4' },
   observedAt: '2026-11-12T09:30:00Z',
 };
@@ -20,11 +23,13 @@ const scans = [
   {
     id: 1, startedAt: '2026-11-12T09:30:00Z',
     completedAt: '2026-11-12T09:31:00Z', summary: { state: 'BASELINE' },
+    item: { evidence: [{ fingerprint: 't/TLS/a', details: { cipher: 'RC4' } }] },
   },
   {
     id: 2, startedAt: '2026-11-13T09:30:00Z',
     completedAt: '2026-11-13T09:31:00Z', label: 'DEMO-1',
     summary: { state: 'CHANGED' },
+    item: { evidence: [{ fingerprint: 't/TLS/a', details: { cipher: 'RC4' } }] },
   },
 ];
 
@@ -99,6 +104,23 @@ describe('EvidenceDetail', () => {
     expect(screen.getAllByText('BASELINE')).toHaveLength(1);
     expect(screen.getAllByText('PERSISTENT')).toHaveLength(2);
     expect(screen.queryByText(/Verified Fix/)).toBeNull();
+  });
+
+  it('does not present a derived persistent label as stored evidence', () => {
+    const { container } = renderDetail({
+      row: {
+        ...row,
+        current: { classification: 'PERSISTENT', scanId: 2 },
+        cells: [
+          { kind: 'baseline', scanId: 1, classification: null },
+          { kind: 'present', scanId: 2, classification: null },
+        ],
+      },
+    });
+
+    const header = container.querySelector('.detail-header');
+    expect(header.textContent).not.toContain('PERSISTENT');
+    expect(header.textContent).toContain('NO STORED CLASSIFICATION');
   });
 
   it('keeps provenance collapsed until opened and shows only stored fields', async () => {

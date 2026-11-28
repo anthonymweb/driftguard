@@ -38,6 +38,16 @@ describe('EvidenceSnapshots', () => {
     expect(container.querySelector('.snapshot-card.state-no-drift')).toBeTruthy();
   });
 
+  it('states when a stored scan has no per-scan detail', () => {
+    const { container } = render(<EvidenceSnapshots snapshots={[
+      { scanId: 4, state: 'FIXED', time: '14 Nov 2026 · 09:30 UTC', detail: null },
+    ]} />);
+
+    expect(screen.getByText('No per-scan detail stored')).toBeTruthy();
+    expect(container.querySelector('.snapshot-detail').textContent)
+      .toBe('No per-scan detail stored');
+  });
+
   it('renders nothing when no snapshot is stored', () => {
     const { container } = render(<EvidenceSnapshots snapshots={[]} />);
     expect(container.querySelector('.snapshot-card')).toBeNull();

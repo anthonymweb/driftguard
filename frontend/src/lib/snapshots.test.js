@@ -59,7 +59,7 @@ describe('storedSnapshots', () => {
       cells: [
         { kind: 'present', classification: null, scanId: 2 },
         { kind: 'fixed', classification: 'FIXED', scanId: 3 },
-        { kind: 'recurring', classification: null, scanId: 4 },
+        { kind: 'recurring', classification: 'RECURRING', scanId: 4 },
       ],
       current: { classification: 'RECURRING', scanId: 4 },
       detail: {},
@@ -87,6 +87,7 @@ describe('storedSnapshots', () => {
 
   it('skips cells that were not observed or fixed', () => {
     const row = {
+      fingerprint: 'f',
       cells: [
         { kind: 'pending', classification: null, scanId: 1 },
         { kind: 'incomplete', classification: null, scanId: 2 },
@@ -99,11 +100,49 @@ describe('storedSnapshots', () => {
     };
     const scans = [1, 2, 3, 4, 5].map((id) => ({
       id, completedAt: '2026-11-24T10:00:00Z', summary: { state: 'CHANGED' },
+      item: { evidence: [{ fingerprint: 'f', details: {} }] },
     }));
 
     expect(storedSnapshots(row, scans)).toEqual([{
       scanId: 5, state: 'NEW', time: '24 Nov 2026 · 10:00 UTC', detail: {},
     }]);
+  });
+
+  it('uses the evidence details stored on each scan, not the latest row detail', () => {
+    const row = {
+      fingerprint: 'f',
+      cells: [
+        { scanId: 1, kind: 'baseline', classification: null },
+        { scanId: 3, kind: 'fixed', classification: 'FIXED' },
+      ],
+      current: { classification: 'FIXED', scanId: 3 },
+      detail: { cipher: 'LATEST' },
+    };
+    const scans = [
+      { id: 1, completedAt: '2026-11-12T09:31:00Z', summary: { state: 'BASELINE' },
+        item: { evidence: [{ fingerprint: 'f', details: { cipher: 'RC4' } }] } },
+      { id: 3, completedAt: '2026-11-14T09:31:00Z', summary: { state: 'CHANGED' },
+        item: { evidence: [{ fingerprint: 'f', details: { cipher: 'AES' } }] } },
+    ];
+
+    const snapshots = storedSnapshots(row, scans);
+
+    expect(snapshots.map((snapshot) => snapshot.detail)).toEqual([
+      { cipher: 'RC4' }, { cipher: 'AES' },
+    ]);
+  });
+
+  it('leaves detail empty when a scan has no evidence for the fingerprint', () => {
+    const row = {
+      fingerprint: 'f',
+      cells: [{ scanId: 1, kind: 'baseline', classification: null }],
+      current: { classification: 'BASELINE', scanId: 1 },
+      detail: { cipher: 'LATEST' },
+    };
+    const scans = [{ id: 1, completedAt: '2026-11-12T09:31:00Z',
+      summary: { state: 'BASELINE' }, item: { evidence: [] } }];
+
+    expect(storedSnapshots(row, scans)[0].detail).toBeNull();
   });
 
   it('deduplicates the first and last observation by scan id', () => {

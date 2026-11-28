@@ -210,6 +210,8 @@
   white-space: nowrap;
 }
 .target-state-pill.is-unmeasured { background: var(--surface-container); color: var(--outline); }
+.target-state-pill.is-loading { background: transparent; color: var(--outline); }
+.target-state-pill.is-unavailable { background: var(--error-container); color: var(--on-error-container); }
 .target-state-pill.state-new { background: var(--primary-container); color: var(--on-primary-container); }
 .target-state-pill.state-persistent { background: var(--surface-container-high); color: var(--on-surface); }
 .target-state-pill.state-fixed { background: var(--secondary-container); color: var(--on-secondary-container); }

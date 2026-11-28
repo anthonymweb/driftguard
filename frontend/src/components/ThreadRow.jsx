@@ -1,3 +1,5 @@
+import { storedCurrentLabel, storedCurrentState } from '../lib/stored-state';
+
 export const MARK_TEXT = {
   baseline: 'baseline observation',
   present: 'present',
@@ -11,6 +13,8 @@ export const MARK_TEXT = {
 };
 
 export function ThreadRow({ row, scans, selected, onSelect, rowIndex = 0, drawIndex = -1 }) {
+  const currentState = storedCurrentState(row);
+  const currentLabel = storedCurrentLabel(row);
   return (
     <tr
       className={`thread-row${selected ? ' is-selected' : ''}`}
@@ -52,8 +56,10 @@ export function ThreadRow({ row, scans, selected, onSelect, rowIndex = 0, drawIn
           </span>
         </td>
       ))}
-      <td className={`thread-current current-${row.current.classification.toLowerCase().replaceAll(' ', '-')}`}>
-        <span className="mono">{row.current.classification}</span>
+      <td
+        className={`thread-current current-${currentLabel.toLowerCase().replaceAll(' ', '-')}${currentState.stored ? '' : ' is-unmeasured'}`}
+      >
+        <span className="mono">{currentLabel}</span>
       </td>
     </tr>
   );

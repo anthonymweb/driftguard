@@ -336,7 +336,7 @@
 @media (max-width: 767px) {
   .evaluation-page { padding-left: var(--space-4); padding-right: var(--space-4); }
   .evaluation-page .page-head h1 { font-size: var(--step-3); }
-  .evaluation-page .area-table { min-width: 0; }
-  .table-scroll { overflow-x: visible; }
+  .evaluation-page .area-table { min-width: 720px; }
+  .table-scroll { overflow-x: auto; }
   .area-table caption { padding-left: 0; }
 }
