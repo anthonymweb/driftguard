@@ -9,6 +9,7 @@ const target = {
   name: 'eservices-lab',
   address: 'https://127.0.0.1:8443',
   target_type: 'web',
+  status: 'active',
   authorization_status: 'authorized',
   authorized_by: 'A. Owner',
   authorized_at: '2026-11-12T09:30:00Z',
@@ -59,8 +60,8 @@ function renderDrift(overrides = {}) {
     session: null,
     ...overrides,
   };
-  render(<Drift {...props} />);
-  return props;
+  const { container } = render(<Drift {...props} />);
+  return { ...props, container };
 }
 
 describe('Drift', () => {
@@ -70,6 +71,36 @@ describe('Drift', () => {
     expect(screen.getByText('A. Owner')).toBeTruthy();
     expect(screen.getByText('Baseline recorded 12 Nov 2026.')).toBeTruthy();
     expect(screen.getByRole('rowheader', { name: /Legacy TLS/ })).toBeTruthy();
+  });
+
+  it('keeps the reference section order with real stored values', async () => {
+    const { container } = await renderDrift();
+    await screen.findByRole('heading', { name: 'eservices-lab' });
+
+    const order = [
+      '.subject',
+      '.stamp',
+      '.difference-line',
+      '.metric-cards',
+      '.thread-wrap',
+    ].map((selector) => container.querySelector(selector));
+
+    for (let index = 1; index < order.length; index += 1) {
+      expect(order[index - 1].compareDocumentPosition(order[index])
+        & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(screen.getByText('TLS / NETWORK · PORTS 8443, 8080')).toBeTruthy();
+  });
+
+  it('shows the stored subject status with only Refresh and Run scan actions', async () => {
+    const { container } = await renderDrift();
+    await screen.findByRole('heading', { name: 'eservices-lab' });
+
+    expect(screen.getByText('active')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Run scan' })).toBeTruthy();
+    expect(container.querySelectorAll('.subject-actions button')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /Export Report/i })).toBeNull();
   });
 
   it('queues a scan and reloads once', async () => {

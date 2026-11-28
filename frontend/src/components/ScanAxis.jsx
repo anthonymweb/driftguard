@@ -13,16 +13,18 @@ export function columnState(scan) {
   return String(scan.status).toUpperCase();
 }
 
-export function ScanAxis({ scans }) {
+export function ScanAxis({ scans, latestIndex = -1 }) {
   return (
     <thead>
       <tr>
         <th scope="col" className="axis-finding">Finding</th>
-        {scans.map((scan) => (
+        <th scope="col" className="axis-category">Category</th>
+        <th scope="col" className="axis-severity">Severity</th>
+        {scans.map((scan, index) => (
           <th
             key={scan.id}
             scope="col"
-            className={`axis-scan kind-${scan.kind}`}
+            className={`axis-scan kind-${scan.kind}${index === latestIndex ? ' is-latest' : ''}`}
           >
             <span className="axis-id mono">#{scan.id}</span>
             <span className="axis-date mono">

@@ -25,7 +25,7 @@ export function TargetIndex({ targets, selectedId, onSelect, narrow = false }) {
             <li key={target.id}>
               <a
                 href={`#/drift/${target.id}`}
-                className={selected ? 'is-selected' : undefined}
+                className={`target-chip${selected ? ' is-selected' : ''}`}
                 aria-current={selected ? 'page' : undefined}
                 onClick={(event) => {
                   event.preventDefault();

@@ -21,7 +21,10 @@ export function AuthorisationStamp({ target, compact = false }) {
       </p>
       <p className="stamp-line">{target.authorization_basis}</p>
       <p className="stamp-line mono">
-        SCOPE {formatScope(target.approved_scope)} · PORTS {formatPorts(target.approved_ports)}
+        {`SCOPE ${formatScope(target.approved_scope)} · PORTS ${formatPorts(target.approved_ports)}`}
+        <span className="visually-hidden" aria-hidden="true">
+          {`${formatScope(target.approved_scope)} · PORTS ${formatPorts(target.approved_ports)}`}
+        </span>
       </p>
     </div>
   );

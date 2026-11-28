@@ -17,12 +17,12 @@ export function ThreadGrid({ model, selected, onSelect }) {
           Evidence threads across {model.scans.length} scans. Columns marked not compared
           are excluded from the comparison.
         </caption>
-        <ScanAxis scans={model.scans} />
+        <ScanAxis scans={model.scans} latestIndex={drawIndex} />
         <tbody>
           {model.groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="thread-group">
-                <th scope="colgroup" colSpan={model.scans.length + 2}>{group.key}</th>
+                <th scope="colgroup" colSpan={model.scans.length + 4}>{group.key}</th>
               </tr>
               {group.rows.map((row) => {
                 const index = rowIndex;
