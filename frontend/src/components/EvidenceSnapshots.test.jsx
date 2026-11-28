@@ -30,6 +30,14 @@ describe('EvidenceSnapshots', () => {
     expect(card.querySelector('pre').textContent).toContain('RC4');
   });
 
+  it('slugs multi-word stored states for the state class', () => {
+    const { container } = render(<EvidenceSnapshots snapshots={[
+      { scanId: 5, state: 'NO DRIFT', time: '24 Nov 2026 · 10:00 UTC', detail: {} },
+    ]} />);
+
+    expect(container.querySelector('.snapshot-card.state-no-drift')).toBeTruthy();
+  });
+
   it('renders nothing when no snapshot is stored', () => {
     const { container } = render(<EvidenceSnapshots snapshots={[]} />);
     expect(container.querySelector('.snapshot-card')).toBeNull();

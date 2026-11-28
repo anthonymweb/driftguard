@@ -10,7 +10,8 @@ function stateFor(cell, scan, row) {
   if (cell.kind === 'fixed') return 'FIXED';
   if (scan.summary?.state === 'BASELINE') return 'BASELINE';
   if (scan.summary?.state === 'NO DRIFT') return scan.summary.state;
-  return row.current?.classification;
+  if (cell.scanId === row.current?.scanId) return row.current?.classification;
+  return null;
 }
 
 export function storedSnapshots(row, scans = []) {
@@ -38,8 +39,10 @@ export function storedSnapshots(row, scans = []) {
       scanId: cell.scanId,
       state,
       time: formatDateTime(scan.completedAt ?? scan.startedAt),
+      // The row carries the latest stored evidence detail; reusing it is the only
+      // stored payload available — no per-scan detail is invented for a card.
       detail: row.detail ?? {},
     });
   }
-  return snapshots;
+  return snapshots.sort((a, b) => a.scanId - b.scanId);
 }

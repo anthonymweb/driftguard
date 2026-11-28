@@ -328,7 +328,7 @@
   border-color: transparent;
 }
 .snapshot-card.state-recurring .snapshot-state { color: var(--on-error-container); }
-.snapshot-card[class*='state-no'] .snapshot-state { color: var(--secondary); }
+.snapshot-card.state-no-drift .snapshot-state { color: var(--secondary); }
 
 .detail-provenance[open] > summary { border-bottom: 1px solid var(--outline-variant); }
 .accordion-trigger > summary::after {

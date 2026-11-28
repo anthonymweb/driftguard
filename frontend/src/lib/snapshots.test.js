@@ -30,6 +30,50 @@ describe('storedSnapshots', () => {
       .includes(snapshot.state))).toBe(true);
   });
 
+  it('orders stored states by scan id when a fix precedes the last observation', () => {
+    const row = {
+      cells: [
+        { kind: 'baseline', classification: null, scanId: 1 },
+        { kind: 'present', classification: 'PERSISTENT', scanId: 2 },
+        { kind: 'fixed', classification: 'FIXED', scanId: 3 },
+      ],
+      current: { classification: 'FIXED', scanId: 3 },
+      detail: { cipher: 'RC4' },
+    };
+    const scans = [
+      { id: 1, completedAt: '2026-11-12T09:31:00Z', summary: { state: 'BASELINE' } },
+      { id: 2, completedAt: '2026-11-13T09:31:00Z', summary: { state: 'CHANGED' } },
+      { id: 3, completedAt: '2026-11-14T09:31:00Z', summary: { state: 'CHANGED' } },
+    ];
+
+    const snapshots = storedSnapshots(row, scans);
+
+    expect(snapshots.map((snapshot) => snapshot.scanId)).toEqual([1, 2, 3]);
+    expect(snapshots.map((snapshot) => snapshot.state)).toEqual([
+      'BASELINE', 'PERSISTENT', 'FIXED',
+    ]);
+  });
+
+  it('does not project the latest classification onto an older observation', () => {
+    const row = {
+      cells: [
+        { kind: 'present', classification: null, scanId: 2 },
+        { kind: 'fixed', classification: 'FIXED', scanId: 3 },
+        { kind: 'recurring', classification: null, scanId: 4 },
+      ],
+      current: { classification: 'RECURRING', scanId: 4 },
+      detail: {},
+    };
+    const scans = [2, 3, 4].map((id) => ({
+      id, completedAt: '2026-11-24T10:00:00Z', summary: { state: 'CHANGED' },
+    }));
+
+    const snapshots = storedSnapshots(row, scans);
+
+    expect(snapshots.map((snapshot) => snapshot.scanId)).toEqual([3, 4]);
+    expect(snapshots.map((snapshot) => snapshot.state)).toEqual(['FIXED', 'RECURRING']);
+  });
+
   it('does not invent a fixed snapshot when none is stored', () => {
     const snapshots = storedSnapshots(
       { cells: [{ kind: 'baseline', classification: null, scanId: 1 }],

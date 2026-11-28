@@ -50,7 +50,7 @@ describe('EvidenceDetail', () => {
   it('marks raw local detail and copies only the redacted record', async () => {
     const props = renderDetail();
     expect(screen.getByText('LOCAL DETAIL · NOT REDACTED')).toBeTruthy();
-    expect(screen.getAllByText(/RC4/).length).toBeGreaterThan(0);
+    expect(props.container.querySelector('.detail-local').textContent).toContain('RC4');
 
     await userEvent.setup().click(
       screen.getByRole('button', { name: /Copy redacted record/ }),

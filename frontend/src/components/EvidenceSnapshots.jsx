@@ -6,7 +6,7 @@ export function EvidenceSnapshots({ snapshots = [] }) {
       {snapshots.map((snapshot) => (
         <article
           key={snapshot.scanId}
-          className={`snapshot-card state-${snapshot.state.toLowerCase()}`}
+          className={`snapshot-card state-${snapshot.state.toLowerCase().replace(/\s+/g, '-')}`}
           aria-label={`${snapshot.state} scan #${snapshot.scanId}`}
         >
           <p className="snapshot-state mono">{snapshot.state}</p>
