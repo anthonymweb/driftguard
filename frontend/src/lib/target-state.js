@@ -13,13 +13,12 @@ function recordedAt(event) {
 }
 
 function latestDriftEvent(drift) {
-  const frozen = drift.filter((event) => FROZEN_CLASSIFICATIONS.has(event?.classification));
-  if (frozen.length === 0) return null;
+  if (drift.length === 0) return null;
 
-  let chosen = frozen[0];
+  let chosen = drift[0];
   let chosenAt = recordedAt(chosen);
-  for (let index = 1; index < frozen.length; index += 1) {
-    const event = frozen[index];
+  for (let index = 1; index < drift.length; index += 1) {
+    const event = drift[index];
     const at = recordedAt(event);
     if (at === null && chosenAt === null) {
       chosen = event; // no timestamps: preserve stored array order
@@ -36,7 +35,7 @@ function latestDriftEvent(drift) {
  * classifier: only classifications already stored by the backend can be returned.
  */
 export function latestStoredState(history) {
-  const comparable = (history?.scans ?? [])
+  const comparable = [...(history?.scans ?? [])]
     .filter((entry) => entry?.comparable === true && entry.scan != null)
     .sort((a, b) => a.scan.id - b.scan.id);
   const latest = comparable.at(-1);
@@ -44,7 +43,11 @@ export function latestStoredState(history) {
 
   const scanId = latest.scan.id;
   const drift = latestDriftEvent(latest.drift ?? []);
-  if (drift) return { classification: drift.classification, scanId };
+  if (drift) {
+    return FROZEN_CLASSIFICATIONS.has(drift.classification)
+      ? { classification: drift.classification, scanId }
+      : null;
+  }
 
   const state = latest.summary?.state;
   if (state === 'BASELINE' || state === 'NO DRIFT') {

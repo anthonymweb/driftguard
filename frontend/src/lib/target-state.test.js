@@ -59,13 +59,13 @@ describe('latestStoredState', () => {
     ] })).toBeNull();
   });
 
-  it('ignores non-frozen drift classifications', () => {
+  it('returns null when the newest stored drift event is not frozen', () => {
     expect(latestStoredState({ scans: [
       { comparable: true, scan: { id: 7 }, drift: [
         { classification: 'NEW', recorded_at: '2026-11-20T10:00:00Z' },
         { classification: 'REGRESSED', recorded_at: '2026-11-21T10:00:00Z' },
       ], summary: { state: 'CHANGED' } },
-    ] })).toEqual({ classification: 'NEW', scanId: 7 });
+    ] })).toBeNull();
   });
 
   it('returns null for an empty or missing history', () => {
