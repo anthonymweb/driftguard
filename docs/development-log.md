@@ -419,3 +419,54 @@ clean targets read `BASELINE → NO DRIFT ×4`. `/api/evaluation` is available w
 positives, TLS accuracy 1.0 (7/7), and five honest Network misses caused by the 8443-only
 scope. The research DB still holds 1 target / 3 scans / 0 evidence / 0 drift events.
 All four console routes were read back through Chrome CDP and show stored real data.
+
+## 2026-11-28 — Faithful four-screen rebuild
+
+**What changed.** On `faithful-screen-rebuild` (off `22057e5`), rebuilt the visual shell and
+all four Drift console surfaces to follow the supplied Stitch screens: shared reference
+primitives (`2d906a7`), Drift subject/timeline (`97300b1`), stored evidence cards and mobile
+threads (`9d33dc6`, fixed in `9e19044`), Targets with one stored-history read per target and
+stored-state pills (`ab6dc13`, fixed in `5209681`), Evaluation (`cbebfa5`), and Settings
+(`b7c58f1`). Every task had a scoped review; the two Needs-fixes verdicts were closed by the
+fix commits above. `docs/DEMO_GUIDE.md` now describes the new section order, target pills,
+and the removal of the old UI-side `PERSISTENT` fallback.
+
+**Why.** The owner asked for a prototype by tomorrow whose four screens visibly resemble the
+provided UIs, with resemblance as the tie-breaker — but only for values that exist in the
+demo database. The lab remains the measurement fixture, not a demo prop.
+
+**What was learned.** (1) A candidate list ordered as first-observed → fixed → last-observed
+can render a FIXED event before a later observation; sorting by `scanId` after dedup keeps
+stored states chronological. (2) The latest `row.current.classification` may only be used for
+the cell at `row.current.scanId`; applying it to older cells invents a state. (3) A target
+pill must select the newest stored drift event *before* checking the frozen whitelist —
+filtering first silently falls back to an older state. (4) The plan's unscoped forbidden-copy
+grep hits legitimate negative tests and guide instructions, so the audit is recorded with a
+scoped grep over product source (excluding tests) and the guide. (5) Parallel page tasks need
+controller-owned git staging/commits to avoid index races.
+
+**Remaining.** Per-surface visual approval by the owner is still outstanding; the automated
+gate captured non-blank screenshots at 1440×900 and 390×844 and verified structure, DOM
+values, and 16px mobile gutters, but could not judge pixel resemblance. The lab-driven viva
+with a live scan and redacted export is still to be rehearsed. Minor review notes (duplicate
+area derivation in Evaluation, desktop footprint grid columns, malformed `recorded_at` edge
+case) are non-blocking and deliberately not reopened here. The whole-branch review also found
+two evidence-fidelity defects that were fixed before merge: the renderers were showing the
+UI-derived `PERSISTENT` fallback as a stored label, and snapshot cards reused the latest
+row detail instead of that scan's stored evidence. Loading, failed, and genuinely absent
+target-state reads are now distinct; mobile Evaluation keeps its scrollable six-column table.
+
+**Carried-over findings explicitly still open** (not introduced or resolved by this branch):
+`useHistory` request-generation/abort guard; explicit auth/mode state instead of inferring
+local research from no session; dialog focus containment/restore/Escape; CSV download/formula
+hardening; polling scope and Evaluation error/remediation copy; duplicate per-area derivation
+in Evaluation; malformed `recorded_at` on the newest target drift entry; the 2×2 desktop
+Settings footprint grid where the brief described 3-up tiles; and the 900px/600px plus
+real-keyboard-focus browser pass. They are listed in `PROJECT-STATE.md` so future handoffs do
+not mistake this visual branch for a resolution of those items.
+
+Verification: frontend 30 files / 158 tests pass; production build succeeds; backend 145 tests
+unchanged; scoped forbidden-copy check clean. Live API on `demo-driftguard.db` reported
+`5 / 25 / 7 / 8` and `/api/evaluation` `7/12`, 5 misses, 0 false positives, TLS `7/7`,
+Network `0/5`; research DB remains `1 / 3 / 0 / 0`. Screenshots and `dom-audit.json` are in
+`/tmp/opencode/driftguard-rebuild-shots/`, outside version control.

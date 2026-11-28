@@ -1,3 +1,5 @@
+import { storedCurrentLabel, storedCurrentState } from '../lib/stored-state';
+
 export const MARK_TEXT = {
   baseline: 'baseline observation',
   present: 'present',
@@ -11,6 +13,8 @@ export const MARK_TEXT = {
 };
 
 export function ThreadRow({ row, scans, selected, onSelect, rowIndex = 0, drawIndex = -1 }) {
+  const currentState = storedCurrentState(row);
+  const currentLabel = storedCurrentLabel(row);
   return (
     <tr
       className={`thread-row${selected ? ' is-selected' : ''}`}
@@ -24,10 +28,16 @@ export function ThreadRow({ row, scans, selected, onSelect, rowIndex = 0, drawIn
         <span>{row.title}</span>
         <span className="mono thread-resource">{row.resource}</span>
       </th>
+      <td className="thread-category">
+        <span className="mono-chip">{row.category}</span>
+      </td>
+      <td className="thread-severity">
+        <span className="mono">{row.severity}</span>
+      </td>
       {row.cells.map((cell, index) => (
         <td
           key={scans[index].id}
-          className={`thread-cell kind-${cell.kind}${index === drawIndex ? ' is-drawing' : ''}`}
+          className={`thread-cell kind-${cell.kind}${index === drawIndex ? ' is-drawing is-latest' : ''}`}
           style={index === drawIndex
             ? { animationDelay: `${Math.min(rowIndex, 8) * 20}ms` }
             : undefined}
@@ -38,14 +48,18 @@ export function ThreadRow({ row, scans, selected, onSelect, rowIndex = 0, drawIn
             <span className={`mark mark-${cell.kind}`} aria-hidden="true" />
           )}
           {cell.kind === 'absent' && <span className="mark mark-absent" aria-hidden="true" />}
-          <span className="visually-hidden">{MARK_TEXT[cell.kind]}</span>
+          <span className="state-pill">
+            <span className="visually-hidden">{MARK_TEXT[cell.kind]}</span>
+            {cell.classification && (
+              <span className="state-token mono">{cell.classification}</span>
+            )}
+          </span>
         </td>
       ))}
-      <td className={`thread-current current-${row.current.classification.toLowerCase().replaceAll(' ', '-')}`}>
-        <span className="mono">{row.current.classification}</span>
-        {['Critical', 'High'].includes(row.severity) && (
-          <span className="severity mono">{row.severity}</span>
-        )}
+      <td
+        className={`thread-current current-${currentLabel.toLowerCase().replaceAll(' ', '-')}${currentState.stored ? '' : ' is-unmeasured'}`}
+      >
+        <span className="mono">{currentLabel}</span>
       </td>
     </tr>
   );

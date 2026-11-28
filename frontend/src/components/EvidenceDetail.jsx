@@ -3,7 +3,9 @@ import { useState } from 'react';
 import {
   downloadText, redactedRecordFor, scanCsvFilename, toCsv,
 } from '../lib/csv';
-import { formatDateTime } from '../lib/format';
+import { storedSnapshots } from '../lib/snapshots';
+import { storedCurrentLabel, storedCurrentState } from '../lib/stored-state';
+import { EvidenceSnapshots } from './EvidenceSnapshots';
 
 const clipboardCopy = async (text) => {
   if (!navigator.clipboard?.writeText) {
@@ -31,6 +33,8 @@ export function EvidenceDetail({
   const [error, setError] = useState(null);
   const observedIndex = lastObservedIndex(row);
   const scan = observedIndex >= 0 ? scans[observedIndex] : null;
+  const currentState = storedCurrentState(row);
+  const currentLabel = storedCurrentLabel(row);
 
   async function withRecords(action, label) {
     if (!scan) {
@@ -71,48 +75,63 @@ export function EvidenceDetail({
 
   return (
     <aside className="detail-rail" aria-labelledby="detail-title">
-      <div>
-        <p className="engraved">SELECTED FINGERPRINT</p>
-        <h2 id="detail-title">{row.title}</h2>
-        <dl>
-          <div><dt>Resource</dt><dd className="mono">{row.resource}</dd></div>
-          <div><dt>Severity</dt><dd>{row.severity}</dd></div>
-          <div><dt>Fingerprint</dt><dd className="mono">{row.fingerprint}</dd></div>
-          <div>
-            <dt>Last observed</dt>
-            <dd>
-              {scan
-                ? `#${scan.id} · ${formatDateTime(scan.completedAt ?? scan.startedAt)}`
-                : 'Never in this window'}
-            </dd>
-          </div>
-          <div><dt>Current</dt><dd className="mono">{row.current.classification}</dd></div>
-        </dl>
-        <div className="detail-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={copyRecord}
-            disabled={busy !== null || !scan}
+      <header className="detail-header">
+        <div className="detail-badges">
+          <span
+            className={`status-pill detail-classification mono${currentState.stored ? '' : ' is-unmeasured'}`}
           >
-            {busy === 'copy' ? 'Copying…' : 'Copy redacted record'}
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={exportScan}
-            disabled={busy !== null || !scan}
-          >
-            {busy === 'export' ? 'Exporting…' : `Export scan #${scan?.id ?? '—'}`}
-          </button>
+            {currentLabel}
+          </span>
+          <span className="mono-chip">{row.category ?? '—'}</span>
+          <span className="mono-chip">{row.resource ?? '—'}</span>
         </div>
-        <p className="detail-note">
-          Export and copy use the redacted evidence endpoint. The token map never leaves
-          the backend process.
-        </p>
-        {message && <p className="detail-status" role="status">{message}</p>}
-        {error && <p className="form-error" role="alert">{error}</p>}
+        <h2 id="detail-title">{row.title}</h2>
+      </header>
+
+      <EvidenceSnapshots snapshots={storedSnapshots(row, scans)} />
+
+      <div className="detail-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={copyRecord}
+          disabled={busy !== null || !scan}
+        >
+          {busy === 'copy' ? 'Copying…' : 'Copy redacted record'}
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={exportScan}
+          disabled={busy !== null || !scan}
+        >
+          {busy === 'export' ? 'Exporting…' : `Export scan #${scan?.id ?? '—'}`}
+        </button>
       </div>
+      <p className="detail-note">
+        Export and copy use the redacted evidence endpoint. The token map never leaves
+        the backend process.
+      </p>
+      {message && <p className="detail-status" role="status">{message}</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
+
+      <details className="accordion-trigger detail-provenance">
+        <summary>Evidence provenance</summary>
+        <div className="provenance-grid">
+          <div>
+            <p className="engraved">Scan</p>
+            <span className="mono">{`#${scan?.id ?? '—'}`}</span>
+          </div>
+          <div>
+            <p className="engraved">Stored scan label</p>
+            <span className="mono">{scan?.label ?? '—'}</span>
+          </div>
+          <div>
+            <p className="engraved">Observed at</p>
+            <span className="mono">{row.observedAt ?? '—'}</span>
+          </div>
+        </div>
+      </details>
 
       <div className="detail-local">
         <p className="engraved">LOCAL DETAIL · NOT REDACTED</p>

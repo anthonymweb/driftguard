@@ -15,8 +15,9 @@ export function AppShell({ route, mode, onSignOut, narrow = false, children }) {
     </span>
   );
   const signOut = mode.kind === 'operator' && onSignOut ? (
-    <button type="button" className="text-button" onClick={onSignOut}>Sign out</button>
+    <button type="button" className="text-button top-signout" onClick={onSignOut}>Sign out</button>
   ) : null;
+  const capsule = route.page === 'drift' || route.page === 'targets';
 
   const links = DESTINATIONS.map(([page, label, icon]) => (
     <a
@@ -49,16 +50,29 @@ export function AppShell({ route, mode, onSignOut, narrow = false, children }) {
 
   return (
     <div className="shell">
-      <aside className="sidebar">
-        <a className="brand" href="#/drift" aria-label="DriftGuard drift console">
-          <Icon name="shield" />
-          <span>DriftGuard</span>
-          <span className="version-chip">v{APP_VERSION}</span>
-        </a>
-        <nav className="side-nav" aria-label="Primary" id="primary-nav">{links}</nav>
-        <div className="sidebar-foot">{modeChip}{signOut}</div>
-      </aside>
+      <header className="topbar">
+        <div className="topbar-inner">
+          <div className="topbar-left">
+            <a className="brand" href="#/drift" aria-label="DriftGuard drift console">
+              <span className="brand-tile"><Icon name="shield" /></span>
+              <span>DriftGuard</span>
+            </a>
+            <span className="version-chip">v{APP_VERSION}</span>
+            <span className="top-divider" aria-hidden="true" />
+            <nav className={`top-nav${capsule ? ' capsule' : ''}`} aria-label="Primary" id="primary-nav">{links}</nav>
+          </div>
+          <div className="topbar-right">
+            {modeChip}
+            {signOut}
+          </div>
+        </div>
+      </header>
       <main className="console">{children}</main>
+      <footer className="footer">
+        <div className="footer-inner">
+          <span className="footer-meta">DriftGuard · v{APP_VERSION}</span>
+        </div>
+      </footer>
     </div>
   );
 }

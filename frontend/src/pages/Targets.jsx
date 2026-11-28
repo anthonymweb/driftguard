@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { AuthorisationStamp } from '../components/AuthorisationStamp';
 import { Icon } from '../components/Icon';
 import { RegisterTargetSheet } from '../components/RegisterTargetSheet';
+import { TargetStatePill } from '../components/TargetStatePill';
 import { EmptySheet, SheetError, SheetLoading } from '../components/StateBlocks';
 import { formatDateTime, formatPorts, formatScope } from '../lib/format';
+import { useTargetStates } from '../state/useTargetStates';
 
 export function Targets({
   client, targets, loading, error, onReload, onOpen, onScanQueued, onRegistered,
@@ -17,6 +19,7 @@ export function Targets({
   const [busyId, setBusyId] = useState(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const { states, loading: statesLoading, errors: stateErrors } = useTargetStates(client, targets);
 
   const matches = {
     all: () => true,
@@ -67,7 +70,7 @@ export function Targets({
   return (
     <section className="targets-page">
       <header className="page-head">
-        <div>
+        <div className="page-head-copy">
           <p className="engraved">TARGET REGISTER</p>
           <h1>Targets</h1>
           <p className="lede">
@@ -88,7 +91,7 @@ export function Targets({
 
       {actionError && <p className="form-error" role="alert">{actionError}</p>}
 
-      <ul className="stat-tiles">
+      <ul className="stat-tiles" aria-label="Target register summary">
         <li>
           <span className="tile-icon"><Icon name="list_alt" /></span>
           <p className="tile-label">Registered</p>
@@ -108,16 +111,6 @@ export function Targets({
 
       {targets.length > 0 && (
         <div className="roster-toolbar">
-          <div className="search-field">
-            <Icon name="search" />
-            <input
-              type="search"
-              aria-label="Search targets"
-              placeholder="Search by name, address, or scope"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
           <div className="filter-tabs" role="group" aria-label="Filter targets">
             {[
               ['all', 'All'],
@@ -134,6 +127,16 @@ export function Targets({
                 {label} <span className="filter-count">{countFor(key)}</span>
               </button>
             ))}
+          </div>
+          <div className="search-field">
+            <Icon name="search" />
+            <input
+              type="search"
+              aria-label="Search targets"
+              placeholder="Search by name, address, or scope"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
           </div>
         </div>
       )}
@@ -158,63 +161,87 @@ export function Targets({
         <p role="status">No targets match this filter or search.</p>
       ) : (
         <ul className="roster">
-          {visible.map((target) => (
-            <li
-              className={`roster-row${target.scannable ? '' : ' is-refused'}`}
-              key={target.id}
-            >
-              <div className="roster-identity">
-                <button type="button" className="roster-name" onClick={() => onOpen(target.id)}>
-                  {target.name}
-                </button>
-                <span className="mono roster-address">
-                  {target.address} · {target.target_type}
-                </span>
-              </div>
+          {visible.map((target) => {
+            const reasons = target.refusal_reasons ?? [];
+            return (
+              <li
+                className={`roster-row${reasons.length > 0 ? ' is-refused' : ''}`}
+                key={target.id}
+              >
+                <div className="roster-main">
+                  <div className="roster-identity">
+                    <span className="icon-tile roster-icon"><Icon name="dns" /></span>
+                    <div className="roster-identity-text">
+                      <button
+                        type="button"
+                        className="roster-name"
+                        onClick={() => onOpen(target.id)}
+                      >
+                        {target.name}
+                      </button>
+                      <span className="mono roster-address">
+                        {target.address} · {target.target_type}
+                      </span>
+                    </div>
+                  </div>
 
-              <AuthorisationStamp target={target} compact />
+                  <div className="roster-badges">
+                    <TargetStatePill
+                      state={states[target.id] ?? null}
+                      loading={statesLoading && !stateErrors[target.id]}
+                      unavailable={Boolean(stateErrors[target.id])}
+                    />
+                    <AuthorisationStamp target={target} compact />
+                  </div>
 
-              <div className="roster-field">
-                <span className="engraved">SCOPE</span>
-                <span>{formatScope(target.approved_scope)}</span>
-                <span className="mono">{formatPorts(target.approved_ports)}</span>
-              </div>
+                  {reasons.length > 0 && (
+                    <p className="refusal refusal-callout">{reasons.join(' ')}</p>
+                  )}
 
-              <div className="roster-field">
-                <span className="engraved">LAST SCAN</span>
-                {target.last_scan ? (
-                  <span>
-                    #{target.last_scan.id} · {target.last_scan.status} ·{' '}
-                    {formatDateTime(target.last_scan.completed_at ?? target.last_scan.started_at)}
-                  </span>
-                ) : <span>No scans</span>}
-              </div>
+                  <div className="roster-detail-grid">
+                    <div className="roster-field">
+                      <span className="engraved">SCOPE</span>
+                      <span>{formatScope(target.approved_scope)}</span>
+                    </div>
+                    <div className="roster-field">
+                      <span className="engraved">PORTS</span>
+                      <span className="mono">{formatPorts(target.approved_ports)}</span>
+                    </div>
+                    <div className="roster-field">
+                      <span className="engraved">LAST SCAN</span>
+                      {target.last_scan ? (
+                        <span>
+                          #{target.last_scan.id} · {target.last_scan.status} ·{' '}
+                          {formatDateTime(target.last_scan.completed_at ?? target.last_scan.started_at)}
+                        </span>
+                      ) : <span>No scans</span>}
+                    </div>
+                  </div>
+                </div>
 
-              <div className="roster-actions">
-                <button type="button" className="secondary-button" onClick={() => onOpen(target.id)}>
-                  <Icon name="open_in_new" />
-                  Open
-                </button>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={!target.scannable || !canScan || busyId === target.id}
-                  title={!canScan ? 'Scanning requires an operator role.' : undefined}
-                  onClick={() => scan(target)}
-                >
-                  <Icon name="play_arrow" />
-                  {busyId === target.id ? 'Queueing…' : 'Run scan'}
-                </button>
-                {!target.scannable && (
-                  <p className="refusal">
-                    {target.refusal_reasons.length > 0
-                      ? target.refusal_reasons.join(' ')
-                      : 'Scanning is not permitted for this target.'}
-                  </p>
-                )}
-              </div>
-            </li>
-          ))}
+                <div className="roster-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => onOpen(target.id)}
+                  >
+                    <Icon name="open_in_new" />
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={!target.scannable || !canScan || busyId === target.id}
+                    title={!canScan ? 'Scanning requires an operator role.' : undefined}
+                    onClick={() => scan(target)}
+                  >
+                    <Icon name="play_arrow" />
+                    {busyId === target.id ? 'Queueing…' : 'Run scan'}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 

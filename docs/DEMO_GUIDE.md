@@ -3,7 +3,7 @@
 This is the single runbook for demonstrating DriftGuard. It explains what the system is,
 how it is built, every way to load targets, and exactly what is on screen in the preloaded
 demo. Everything shown in the console comes from a **completed real scan** against a live
-lab target; nothing is seeded, simulated, or invented.
+lab target; nothing is seeded, fabricated, or invented.
 
 ---
 
@@ -54,11 +54,11 @@ FastAPI main.py  →  SQLite demo-driftguard.db
 frontend/ — React Drift console (Drift · Targets · Evaluation · Settings)
 ```
 
-Read flow: the console loads target history from the API. The metric counts and the
-difference line come from stored `DriftEvent` rows. The grid marks observed presence itself;
-where a finding is present but no stored classification exists it displays `PERSISTENT` as a
-known UI fallback (tracked separately for removal) — the backend owns the frozen labels.
-An empty register or an empty observation window is shown as such — never as "all clear".
+Read flow: the console loads target history from the API. The metric counts, the difference
+line, and every stored-state card come from stored evidence and `DriftEvent` rows. The grid
+marks observed presence itself; when no classification is stored for an observation, no
+state is invented for it. The backend owns the frozen labels. An empty register or an empty
+observation window is shown as such — never as "all clear".
 
 Write flow: a scan is queued through `POST /api/targets/{id}/scans`, assessed in a background
 session, and becomes comparable to earlier scans only when it reaches `completed`. A
@@ -220,14 +220,22 @@ The main answer to "what changed between scans?"
 - Select a clean target such as **juice-shop**: `BASELINE` followed by four `NO DRIFT`
   observations. Say: *"Nothing changed, so nothing is reported. An empty state means no
   observed change — not that the scan failed."*
+- The reference section order is subject → authorisation stamp → difference line → four
+  stored-count cards → observation timeline → detail rail. The rail shows only states stored
+  for the selected thread; on narrow screens every stored thread stays reachable as a card
+  and the first is expanded.
 - The authorisation stamp under the subject shows who authorised the target. The redacted
   export is available from the detail rail; it carries redaction tokens, never raw secrets.
 
 ### Targets — `#/targets`
 
-- Five lab targets, each with an authorisation record and scope. Say: *"A scan is refused
-  unless there is an attributable authorisation record and an approved scope. Pending
-  targets can be inventoried but cannot be assessed."*
+- Five lab targets, each with an authorisation record and scope. The register reads one
+  stored history per target and shows the newest **stored** drift state as a pill; a target
+  with no stored state shows an honest dash. Say: *"A scan is refused unless there is an
+  attributable authorisation record and an approved scope. Pending targets can be
+  inventoried but cannot be assessed."*
+- The page order is TARGET REGISTER head → Registered / Authorized / Refused tiles →
+  All / Authorized / Pending / Refused filter tabs and search → vertical roster cards.
 - This is also where a new target is registered (§5.1).
 
 ### Evaluation — `#/evaluation`
@@ -319,7 +327,8 @@ run `preload.py sequence`. Skipping the archive reuses labels and blocks evaluat
 
 **During**
 
-- [ ] Say *"what changed between scans"*, never "comparator".
+- [ ] Say *"what changed between scans"*; the internal design metaphor stays out of
+      user-facing copy.
 - [ ] Point at stored rows, not at the tools: the tools are how evidence is collected; the
       frozen classifier is what produces the labels.
 - [ ] If demonstrating a live scan, use `POST /api/targets/{id}/scans` and wait for

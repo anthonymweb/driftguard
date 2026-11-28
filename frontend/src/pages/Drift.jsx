@@ -38,6 +38,17 @@ export function Drift({
     setScanError(null);
   }, [targetId]);
 
+  useEffect(() => {
+    if (!model) return;
+    const rows = model.groups.flatMap((group) => group.rows);
+    if (rows.length === 0) return;
+    setSelectedFingerprint((current) => (
+      rows.some((row) => row.fingerprint === current)
+        ? current
+        : rows[0].fingerprint
+    ));
+  }, [model]);
+
   async function runScan() {
     if (!target) return;
     setScanBusy(true);
@@ -106,10 +117,15 @@ export function Drift({
       />
 
       <section className="drift-subject">
-        <header className="subject">
+        <header className="subject surface-card">
           <div>
-            <p className="engraved">SUBJECT</p>
-            <h1>{target.name}</h1>
+            <p className="eyebrow">SUBJECT</p>
+            <div className="subject-title">
+              <h1>{target.name}</h1>
+              {target.status && (
+                <span className="status-pill subject-status">{target.status}</span>
+              )}
+            </div>
             <p className="mono subject-meta">
               {target.address} · {target.target_type}
             </p>
@@ -169,16 +185,22 @@ export function Drift({
             {model.latestComparable?.summary?.counts && (
               <ul className="metric-cards" aria-label="Counts in the latest comparable scan">
                 {[
-                  ['NEW', 'New findings', 'metric-new', 'add'],
-                  ['PERSISTENT', 'Persistent findings', 'metric-persistent', 'keep'],
-                  ['FIXED', 'Fixed findings', 'metric-fixed', 'check_circle'],
-                  ['RECURRING', 'Recurring findings', 'metric-recurring', 'repeat'],
-                ].map(([key, label, cls, icon]) => (
-                  <li key={key} className={`metric-card ${cls}`}>
-                    <span className="metric-icon"><Icon name={icon} /></span>
-                    <p className="metric-label">{label}</p>
-                    <p className="metric-value">{model.latestComparable.summary.counts[key] ?? 0}</p>
-                    <p className="metric-note">in the latest comparable scan</p>
+                  ['NEW', 'New findings', 'metric-new'],
+                  ['PERSISTENT', 'Persistent findings', 'metric-persistent'],
+                  ['FIXED', 'Fixed findings', 'metric-fixed'],
+                  ['RECURRING', 'Recurring findings', 'metric-recurring'],
+                ].map(([key, label, cls]) => (
+                  <li key={key} className={`metric-card kpi-card ${cls}`}>
+                    <div className="metric-head">
+                      <p className="metric-label">{label}</p>
+                      <span className="status-pill metric-badge">{key}</span>
+                    </div>
+                    <div className="metric-readout">
+                      <p className="metric-value">
+                        {model.latestComparable.summary.counts[key] ?? 0}
+                      </p>
+                      <p className="metric-note">in the latest comparable scan</p>
+                    </div>
                   </li>
                 ))}
               </ul>

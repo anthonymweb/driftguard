@@ -102,7 +102,14 @@ export default function App({ makeClient = createApiClient } = {}) {
   } else if (route.page === 'evaluation') {
     page = <Evaluation client={client} />;
   } else if (route.page === 'settings') {
-    page = <Settings client={client} session={session} apiBase={API_BASE} />;
+    page = (
+      <Settings
+        client={client}
+        session={session}
+        apiBase={API_BASE}
+        targets={targetsState.targets}
+      />
+    );
   } else {
     page = (
       <Drift

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -39,9 +39,17 @@ const civic = {
   refusal_reasons: ['target must be explicitly authorized'],
 };
 
+function makeClient() {
+  return {
+    history: vi.fn().mockResolvedValue({ scans: [] }),
+    runScan: vi.fn(),
+    createTarget: vi.fn(),
+  };
+}
+
 function renderPage(overrides = {}) {
   const props = {
-    client: { runScan: vi.fn(), createTarget: vi.fn() },
+    client: makeClient(),
     targets: [target],
     loading: false,
     error: null,
@@ -52,8 +60,8 @@ function renderPage(overrides = {}) {
     session: null,
     ...overrides,
   };
-  render(<Targets {...props} />);
-  return props;
+  const { container } = render(<Targets {...props} />);
+  return { ...props, container };
 }
 
 describe('Targets', () => {
@@ -122,5 +130,75 @@ describe('Targets', () => {
     expect(screen.queryByText('eservices-lab')).toBeNull();
     expect(screen.queryByText('No targets registered.')).toBeNull();
     expect(screen.getByRole('status').textContent).toContain('No targets match');
+  });
+
+  it('shows one stored drift state pill per target', async () => {
+    const props = renderPage({
+      client: {
+        ...makeClient(),
+        history: vi.fn().mockResolvedValue({ scans: [
+          { comparable: true, scan: { id: 7 },
+            drift: [{ classification: 'RECURRING', recorded_at: '2026-11-24T10:00:00Z' }],
+            summary: { state: 'CHANGED' } },
+        ] }),
+      },
+      targets: [target, civic],
+    });
+
+    await waitFor(() => expect(props.client.history).toHaveBeenCalledTimes(2));
+    expect(screen.getAllByText('RECURRING')).toHaveLength(2);
+  });
+
+  it('marks a loading state read without asserting no stored state', () => {
+    renderPage({
+      client: { ...makeClient(), history: vi.fn().mockReturnValue(new Promise(() => {})) },
+    });
+    expect(screen.getByLabelText(/Reading stored state/)).toBeTruthy();
+    expect(screen.queryByLabelText(/No stored drift state/)).toBeNull();
+  });
+
+  it('marks a failed state read as unavailable', async () => {
+    renderPage({
+      client: { ...makeClient(), history: vi.fn().mockRejectedValue(new Error('unavailable')) },
+    });
+    await waitFor(() => expect(
+      screen.getByLabelText(/Stored state unavailable/),
+    ).toBeTruthy());
+    expect(screen.queryByLabelText(/No stored drift state/)).toBeNull();
+  });
+
+  it('gives the refused stripe only to targets with stored refusal reasons', () => {
+    const { container } = renderPage({
+      targets: [{ ...target, scannable: false, refusal_reasons: [] }],
+    });
+    expect(container.querySelector('.roster-row.is-refused')).toBeNull();
+    expect(screen.queryByText(/Scanning is not permitted/)).toBeNull();
+  });
+
+  it('never shows a non-frozen summary state as a pill', async () => {
+    const props = renderPage({
+      client: {
+        ...makeClient(),
+        history: vi.fn().mockResolvedValue({ scans: [
+          { comparable: true, scan: { id: 8 }, drift: [], summary: { state: 'CHANGED' } },
+        ] }),
+      },
+    });
+
+    await waitFor(() => expect(props.client.history).toHaveBeenCalledWith(1));
+    expect(screen.queryByText('CHANGED')).toBeNull();
+    expect(screen.getByLabelText(/No stored drift state/)).toBeTruthy();
+  });
+
+  it('keeps the registration and scanning role gates', () => {
+    renderPage({ session: { role: 'viewer' } });
+    expect(screen.getByRole('button', { name: 'Register target' }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Run scan' }).disabled).toBe(true);
+  });
+
+  it('keeps the register sheet reachable', async () => {
+    renderPage({ session: { role: 'admin' } });
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Register target' }));
+    expect(screen.getByRole('dialog', { name: 'Register target' })).toBeTruthy();
   });
 });

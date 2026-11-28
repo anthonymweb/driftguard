@@ -25,6 +25,16 @@ describe('TargetIndex', () => {
     expect(screen.getByText('No scans')).toBeTruthy();
   });
 
+  it('uses the reference target-chip hooks while keeping target metadata', () => {
+    const { container } = render(
+      <TargetIndex targets={targets} selectedId={1} onSelect={vi.fn()} />,
+    );
+    const selected = screen.getByRole('link', { name: /eservices-lab/ });
+    expect(selected.classList.contains('target-chip')).toBe(true);
+    expect(container.querySelector('.target-chip .index-mark')).toBeTruthy();
+    expect(container.querySelector('.target-chip .index-last')).toBeTruthy();
+  });
+
   it('selects a target without a page reload', async () => {
     const onSelect = vi.fn();
     render(<TargetIndex targets={targets} selectedId={1} onSelect={onSelect} />);
