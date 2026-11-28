@@ -53,4 +53,29 @@ describe('Settings', () => {
     expect(screen.getByText('142')).toBeTruthy();
     expect(screen.getByText(/^driftguard-ui \d+\.\d+\.\d+$/)).toBeTruthy();
   });
+
+  it('shows real authorisation provenance in the operator panel', async () => {
+    render(<Settings
+      client={{ stats: vi.fn().mockResolvedValue(stats) }}
+      session={null}
+      apiBase="http://127.0.0.1:8000"
+      targets={[{
+        id: 1,
+        name: 'eservices-lab',
+        authorization_status: 'authorized',
+        authorized_by: 'A. Owner',
+        authorized_at: '2026-11-12T09:30:00Z',
+        authorization_basis: 'written approval',
+        approved_scope: ['tls', 'network'],
+        approved_ports: [8443],
+      }]}
+    />);
+
+    await screen.findByText('Connection');
+    expect(screen.getByText('A. Owner')).toBeTruthy();
+    expect(screen.getByText('written approval')).toBeTruthy();
+    expect(screen.getByText(/TLS \/ NETWORK/)).toBeTruthy();
+    expect(screen.queryByText(/PID/)).toBeNull();
+    expect(screen.queryByText(/GPG/)).toBeNull();
+  });
 });
